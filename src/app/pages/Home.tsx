@@ -21,6 +21,14 @@ type ChatMessage = {
 };
 
 const SECTION_IDS = ['home', 'projects', 'about', 'contact'] as const;
+const TOGGLE_GLASS_CLASS =
+  'bg-muted border border-border/80';
+const TOGGLE_INDICATOR_TRANSITION = {
+  type: 'spring',
+  stiffness: 170,
+  damping: 26,
+  mass: 0.9,
+} as const;
 
 function SparklesIcon({ className = 'w-4 h-4' }: { className?: string }) {
   return (
@@ -437,32 +445,36 @@ export default function Home() {
 
   const renderViewModeToggle = (large = false) => {
     const wrapperClass = large
-      ? 'w-[240px] rounded-[28px] p-2 gap-2'
-      : 'rounded-full p-1 gap-2';
+      ? 'w-[240px] rounded-[28px] p-2'
+      : 'rounded-full p-1';
     const buttonSizeClass = large
-      ? 'h-16 flex-1 inline-flex items-center justify-center'
-      : 'p-2 inline-flex items-center justify-center';
+      ? 'h-16 inline-flex items-center justify-center'
+      : 'h-8 w-8 inline-flex items-center justify-center';
     const iconSizeClass = large ? 'w-6 h-6' : 'w-4 h-4';
-    const indicatorId = large ? 'view-mode-indicator-large' : 'view-mode-indicator';
+    const indicatorClass = large
+      ? 'absolute left-2 top-2 bottom-2 w-[calc((100%_-_1rem)/2)] rounded-[20px] bg-foreground transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]'
+      : 'absolute left-1 top-1 bottom-1 w-[calc((100%_-_0.5rem)/2)] rounded-full bg-foreground transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]';
 
     return (
-      <div className={`flex items-center bg-muted border border-border/70 ${wrapperClass}`}>
+      <motion.div
+        layoutId={large ? undefined : 'view-mode-toggle-shell'}
+        transition={TOGGLE_INDICATOR_TRANSITION}
+        className={`relative grid grid-cols-2 items-center ${TOGGLE_GLASS_CLASS} ${wrapperClass}`}
+      >
+        <span
+          aria-hidden="true"
+          className={indicatorClass}
+          style={{ transform: viewMode === 'page' ? 'translateX(100%)' : 'translateX(0)' }}
+        />
         <button
           type="button"
           onClick={() => handleViewModeChange('chatbot')}
-          className={`${buttonSizeClass} relative rounded-[20px] transition-colors ${
+          className={`${buttonSizeClass} relative z-10 rounded-[20px] transition-colors duration-300 ${
             viewMode === 'chatbot' ? 'text-background' : 'text-muted-foreground hover:text-foreground'
           }`}
           title={t.chatbot.aiMode}
           aria-label={t.chatbot.aiMode}
         >
-          {viewMode === 'chatbot' && (
-            <motion.span
-              layoutId={indicatorId}
-              transition={{ type: 'spring', stiffness: 420, damping: 32 }}
-              className="absolute inset-0 rounded-full bg-foreground shadow-sm"
-            />
-          )}
           <span className="relative z-10 flex">
             <SparklesIcon className={iconSizeClass} />
           </span>
@@ -470,56 +482,57 @@ export default function Home() {
         <button
           type="button"
           onClick={() => handleViewModeChange('page')}
-          className={`${buttonSizeClass} relative rounded-[20px] transition-colors ${
+          className={`${buttonSizeClass} relative z-10 rounded-[20px] transition-colors duration-300 ${
             viewMode === 'page' ? 'text-background' : 'text-muted-foreground hover:text-foreground'
           }`}
           title={t.chatbot.pageMode}
           aria-label={t.chatbot.pageMode}
         >
-          {viewMode === 'page' && (
-            <motion.span
-              layoutId={indicatorId}
-              transition={{ type: 'spring', stiffness: 420, damping: 32 }}
-              className="absolute inset-0 rounded-full bg-foreground shadow-sm"
-            />
-          )}
           <span className="relative z-10 flex">
             <PageIcon className={iconSizeClass} />
           </span>
         </button>
-      </div>
+      </motion.div>
     );
   };
 
   const renderLanguageToggle = (large = false) => {
     const wrapperClass = large
-      ? 'w-[240px] rounded-[28px] p-2 gap-2'
-      : 'rounded-full p-1 gap-2';
+      ? 'w-[240px] rounded-[28px] p-2'
+      : 'rounded-full p-1';
     const buttonClass = large
-      ? 'h-16 flex-1 inline-flex items-center justify-center rounded-[20px] text-2xl'
-      : 'px-3 py-1 rounded-full text-sm';
+      ? 'h-16 inline-flex items-center justify-center rounded-[20px] text-2xl'
+      : 'h-8 min-w-10 inline-flex items-center justify-center rounded-full text-sm';
+    const indicatorClass = large
+      ? 'absolute left-2 top-2 bottom-2 w-[calc((100%_-_1rem)/2)] rounded-[20px] bg-foreground transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]'
+      : 'absolute left-1 top-1 bottom-1 w-[calc((100%_-_0.5rem)/2)] rounded-full bg-foreground transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]';
 
     return (
-      <div className={`flex items-center bg-muted border border-border/70 ${wrapperClass}`}>
-          <button
+      <div className={`relative grid grid-cols-2 items-center ${TOGGLE_GLASS_CLASS} ${wrapperClass}`}>
+        <span
+          aria-hidden="true"
+          className={indicatorClass}
+          style={{ transform: language === 'ES' ? 'translateX(100%)' : 'translateX(0)' }}
+        />
+        <button
           type="button"
           onClick={() => handleLanguageChange('EN')}
-          className={`${buttonClass} transition-all ${
-            language === 'EN' ? 'bg-foreground text-background' : 'text-muted-foreground'
+          className={`${buttonClass} relative z-10 transition-colors duration-300 ${
+            language === 'EN' ? 'text-background' : 'text-muted-foreground hover:text-foreground'
           }`}
           style={{ fontWeight: large ? 700 : 600 }}
         >
-          EN
+          <span className="relative z-10">EN</span>
         </button>
         <button
           type="button"
           onClick={() => handleLanguageChange('ES')}
-          className={`${buttonClass} transition-all ${
-            language === 'ES' ? 'bg-foreground text-background' : 'text-muted-foreground'
+          className={`${buttonClass} relative z-10 transition-colors duration-300 ${
+            language === 'ES' ? 'text-background' : 'text-muted-foreground hover:text-foreground'
           }`}
           style={{ fontWeight: large ? 700 : 600 }}
         >
-          ES
+          <span className="relative z-10">ES</span>
         </button>
       </div>
     );
