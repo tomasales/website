@@ -133,12 +133,18 @@ function normalizeIntentText(text: string) {
     .toLowerCase();
 }
 
+function compactIntentText(text: string) {
+  return normalizeIntentText(text)
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 function detectCvLanguage(text: string): CvDownloadLanguage | null {
-  const normalizedText = normalizeIntentText(text);
+  const normalizedText = compactIntentText(text);
 
   if (
-    normalizedText.includes('ingles') ||
-    normalizedText.includes('english') ||
+    /\b(ingles|english|inglish)\b/.test(normalizedText) ||
     normalizedText === 'en' ||
     normalizedText.includes(' cv en')
   ) {
@@ -146,9 +152,7 @@ function detectCvLanguage(text: string): CvDownloadLanguage | null {
   }
 
   if (
-    normalizedText.includes('espanol') ||
-    normalizedText.includes('spanish') ||
-    normalizedText.includes('castellano') ||
+    /\b(espanol|spanish|castellano)\b/.test(normalizedText) ||
     normalizedText === 'es' ||
     normalizedText.includes(' cv es')
   ) {
@@ -158,38 +162,56 @@ function detectCvLanguage(text: string): CvDownloadLanguage | null {
   return null;
 }
 
-function wantsCvDownload(text: string) {
-  const normalizedText = normalizeIntentText(text);
-  const mentionsCv =
+function mentionsCv(text: string) {
+  const normalizedText = compactIntentText(text);
+  return (
     normalizedText.includes('cv') ||
     normalizedText.includes('curriculum') ||
-    normalizedText.includes('resume');
+    normalizedText.includes('resume')
+  );
+}
+
+function wantsCvDownload(text: string) {
+  const normalizedText = compactIntentText(text);
   const asksForDownload =
     normalizedText.includes('descarg') ||
     normalizedText.includes('bajar') ||
+    normalizedText.includes('quiero') ||
+    normalizedText.includes('necesito') ||
     normalizedText.includes('pasame') ||
+    normalizedText.includes('pasar') ||
     normalizedText.includes('mandame') ||
+    normalizedText.includes('comparti') ||
     normalizedText.includes('download') ||
+    normalizedText.includes('share') ||
     normalizedText.includes('send') ||
     normalizedText.includes('get') ||
     normalizedText.includes('link');
 
-  return mentionsCv && asksForDownload;
+  return mentionsCv(text) && asksForDownload;
 }
 
 function assistantAskedCvLanguage(messages: ChatMessage[]) {
-  const lastAssistantMessage = [...messages].reverse().find((message) => message.role === 'assistant');
+  const reversedMessages = [...messages].reverse();
+  const lastAssistantMessage = reversedMessages.find((message) => message.role === 'assistant');
   if (!lastAssistantMessage) return false;
 
-  const normalizedText = normalizeIntentText(lastAssistantMessage.content);
-  return (
-    (normalizedText.includes('cv') || normalizedText.includes('resume')) &&
+  const normalizedText = compactIntentText(lastAssistantMessage.content);
+  const askedLanguageChoice =
     (normalizedText.includes('idioma') ||
       normalizedText.includes('language') ||
-      normalizedText.includes('espanol') ||
-      normalizedText.includes('spanish')) &&
-    (normalizedText.includes('ingles') || normalizedText.includes('english'))
-  );
+      normalizedText.includes('version') ||
+      normalizedText.includes('prefieres') ||
+      normalizedText.includes('preferis') ||
+      normalizedText.includes('queres') ||
+      normalizedText.includes('quieres')) &&
+    (normalizedText.includes('espanol') || normalizedText.includes('spanish')) &&
+    (normalizedText.includes('ingles') || normalizedText.includes('english'));
+
+  if (!askedLanguageChoice) return false;
+
+  const lastUserBeforeQuestion = reversedMessages.find((message) => message.role === 'user');
+  return Boolean(lastUserBeforeQuestion && (wantsCvDownload(lastUserBeforeQuestion.content) || mentionsCv(lastUserBeforeQuestion.content)));
 }
 
 function buildCvDownloadPayload(siteLanguage: Language, cvLanguage: CvDownloadLanguage) {

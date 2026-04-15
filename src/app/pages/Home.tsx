@@ -242,6 +242,38 @@ export default function Home() {
     });
   };
 
+  const handleDownloadAction = async (download: ChatDownloadAction) => {
+    const href = `${import.meta.env.BASE_URL}${download.href}`;
+
+    try {
+      const response = await fetch(href);
+      if (!response.ok) throw new Error('Unable to download file');
+
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+
+      link.href = objectUrl;
+      link.download = download.fileName;
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+    } catch (error) {
+      console.error('CV download failed', error);
+
+      const link = document.createElement('a');
+      link.href = href;
+      link.download = download.fileName;
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    }
+  };
+
   const handleChatSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const nextMessage = chatInput.trim();
@@ -577,7 +609,15 @@ export default function Home() {
                     <div className="w-[88px] h-[88px] sm:w-[104px] sm:h-[104px] rounded-[28px] bg-gradient-to-br from-[#dfe4ff] to-[#f1e6ff] overflow-hidden flex-shrink-0" />
                     <div className="flex-1 max-w-4xl">
                       <h1 className="text-3xl sm:text-4xl md:text-5xl tracking-tight" style={{ fontWeight: 800, lineHeight: 1.05 }}>
-                        {t.chatbot.greeting}
+                        {t.chatbot.greeting}{' '}
+                        <motion.span
+                          className="inline-block"
+                          animate={{ rotate: [0, 14, -8, 14, -4, 10, 0] }}
+                          transition={{ duration: 1.5, repeat: Infinity, repeatDelay: 1 }}
+                        >
+                          👋
+                        </motion.span>
+                        ,
                         <br />
                         {t.chatbot.welcome}
                       </h1>
@@ -601,14 +641,14 @@ export default function Home() {
                     >
                       <p className="text-base sm:text-lg leading-relaxed">{message.content}</p>
                       {message.download && (
-                        <a
-                          href={`${import.meta.env.BASE_URL}${message.download.href}`}
-                          download={message.download.fileName}
+                        <button
+                          type="button"
+                          onClick={() => handleDownloadAction(message.download!)}
                           className="mt-4 inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2 text-sm text-primary-foreground transition-colors hover:bg-primary/90"
                           style={{ fontWeight: 700 }}
                         >
                           {message.download.label}
-                        </a>
+                        </button>
                       )}
                     </div>
                   </div>
@@ -656,7 +696,7 @@ export default function Home() {
             exit={{ opacity: 0, y: -14 }}
             transition={{ duration: 0.22, ease: 'easeOut' }}
           >
-          <section id="home" className="min-h-screen flex items-center pt-24 pb-[88px]">
+          <section id="home" className="min-h-screen flex items-start lg:items-center pt-[120px] lg:pt-24 pb-[88px]">
             <div className="max-w-[1400px] mx-auto px-6 lg:px-12 w-full">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-24 items-center">
                 <motion.div

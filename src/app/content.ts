@@ -93,7 +93,7 @@ export const content = {
       copyright: 'Copyright 2022',
     },
     chatbot: {
-      greeting: 'Hello 👋,',
+      greeting: 'Hello I´m Tomas',
       welcome: 'ask me anything below.',
       placeholder: 'Ask me anything...',
       send: 'Send',
@@ -203,7 +203,7 @@ export const content = {
       copyright: 'Copyright 2022',
     },
     chatbot: {
-      greeting: 'Hola 👋,',
+      greeting: 'Hola soy Tomas',
       welcome: 'preguntame lo que quieras abajo.',
       placeholder: 'Preguntame lo que quieras...',
       send: 'Enviar',
