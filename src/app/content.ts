@@ -64,6 +64,14 @@ export const content = {
           avatarImage: 'testimonials/guillermo.jpg',
         },
         {
+          name: 'Francisco Greco',
+          company: 'Suquia',
+          review:
+            'Tomas stands out for his professionalism, creativity and authenticity, as well as a great ability to explain concepts and decisions clearly.',
+          avatar: 'FG',
+          avatarImage: null,
+        },
+        {
           name: 'Miguel Rodriguez',
           company: 'HealthCare Solutions',
           review:
@@ -101,7 +109,7 @@ export const content = {
       aiMode: 'AI chat',
       pageMode: 'Classic view',
       thinking: 'Thinking...',
-      error: 'I could not answer right now. Please try again in a moment.',
+      error: 'The AI is failing right now. Please try again in a moment.',
       authError: 'The configured AI API key is invalid. Please update the server environment variable.',
       quotaError:
         'The AI service reached its usage limit right now. Try again later or check the API quota or billing settings.',
@@ -174,6 +182,14 @@ export const content = {
           avatarImage: 'testimonials/guillermo.jpg',
         },
         {
+          name: 'Francisco Greco',
+          company: 'Suquia',
+          review:
+            'Tomas se destaca por su profesionalismo, creatividad y autenticidad, además de una gran capacidad para explicar conceptos y decisiones con claridad.',
+          avatar: 'FG',
+          avatarImage: null,
+        },
+        {
           name: 'Miguel Rodriguez',
           company: 'HealthCare Solutions',
           review:
@@ -211,7 +227,7 @@ export const content = {
       aiMode: 'Chat AI',
       pageMode: 'Vista clasica',
       thinking: 'Pensando...',
-      error: 'No pude responder en este momento. Proba de nuevo en un rato.',
+      error: 'La AI está fallando, por favor probá en un momento.',
       authError: 'La API key configurada para la AI no es valida. Actualiza la variable del servidor.',
       quotaError:
         'El servicio de AI alcanzo su limite de uso por ahora. Proba mas tarde o revisa la cuota o billing del proveedor.',
