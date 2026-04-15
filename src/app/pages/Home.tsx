@@ -1,4 +1,4 @@
-import { type FormEvent, useEffect, useRef, useState } from 'react';
+import { type FormEvent, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import { AnimatePresence, motion } from 'motion/react';
 import { ArrowUpRight, Menu, Send, X } from 'lucide-react';
@@ -64,6 +64,8 @@ export default function Home() {
   const [testimonialSlides, setTestimonialSlides] = useState<number[]>([]);
   const cvDropdownRef = useRef<HTMLDivElement | null>(null);
   const chatMessagesRef = useRef<HTMLDivElement | null>(null);
+  const pendingTopScrollRef = useRef(false);
+  const skipHashScrollOnceRef = useRef(false);
 
   const t = content[language];
   const hasChatStarted = chatMessages.length > 0 || isChatLoading;
@@ -127,14 +129,50 @@ export default function Home() {
   }, [mobileMenuOpen]);
 
   useEffect(() => {
+    if (viewMode !== 'chatbot') return;
+
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousHtmlOverflow = document.documentElement.style.overflow;
+
+    document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
+
+    return () => {
+      document.body.style.overflow = previousBodyOverflow;
+      document.documentElement.style.overflow = previousHtmlOverflow;
+    };
+  }, [viewMode]);
+
+  useEffect(() => {
     if (!location.hash || viewMode === 'page') return;
     setViewMode('page');
     setShowModeTip(false);
   }, [location.hash, viewMode]);
 
+  useLayoutEffect(() => {
+    if (!pendingTopScrollRef.current) return;
+    pendingTopScrollRef.current = false;
+
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+
+    const animationFrame = window.requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+    });
+
+    return () => window.cancelAnimationFrame(animationFrame);
+  }, [language, viewMode]);
+
   useEffect(() => {
     const id = location.hash.replace('#', '');
     if (!id || viewMode !== 'page') return;
+    if (skipHashScrollOnceRef.current) {
+      skipHashScrollOnceRef.current = false;
+      return;
+    }
 
     requestAnimationFrame(() => {
       const element = document.getElementById(id);
@@ -157,36 +195,31 @@ export default function Home() {
     return () => window.clearTimeout(timeoutId);
   }, [showModeTip, viewMode]);
 
+  const resetModeScroll = () => {
+    pendingTopScrollRef.current = true;
+    skipHashScrollOnceRef.current = true;
+
+    if (location.hash) {
+      navigate(`${location.pathname}${location.search}`, { replace: true });
+    }
+
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  };
+
   const handleViewModeChange = (mode: ViewMode) => {
+    resetModeScroll();
+
     setViewMode(mode);
     setShowModeTip(false);
     setCvDropdownOpen(false);
     setMobileMenuOpen(false);
-
-    requestAnimationFrame(() => {
-      if (mode === 'page') {
-        const element = document.getElementById('home');
-        element?.scrollIntoView({ behavior: 'smooth' });
-        return;
-      }
-
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    });
   };
 
   const handleLanguageChange = (nextLanguage: typeof language) => {
+    resetModeScroll();
+
     setLanguage(nextLanguage);
     setMobileMenuOpen(false);
-
-    requestAnimationFrame(() => {
-      if (viewMode === 'page') {
-        const element = document.getElementById('home');
-        element?.scrollIntoView({ behavior: 'smooth' });
-        return;
-      }
-
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    });
   };
 
   const handleLogoClick = () => {
@@ -520,15 +553,15 @@ export default function Home() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -14 }}
             transition={{ duration: 0.22, ease: 'easeOut' }}
-            className="h-[100svh] max-h-[100svh] overflow-hidden pt-24 pb-[max(1rem,env(safe-area-inset-bottom))] sm:min-h-screen sm:h-auto sm:max-h-none sm:overflow-visible sm:pt-36 sm:pb-20 flex items-start"
+            className="fixed inset-0 z-0 h-[100svh] h-[100dvh] max-h-[100svh] max-h-[100dvh] overflow-hidden bg-background pt-24 pb-3 sm:pb-8 flex items-start"
           >
           <div className="max-w-6xl mx-auto px-6 lg:px-12 w-full h-full">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
-              className={`h-full min-h-0 sm:min-h-[calc(100vh-10rem)] flex flex-col pb-0 sm:py-12 ${
-                hasChatStarted ? 'pt-4' : 'pt-6'
+              className={`h-full min-h-0 flex flex-col pb-0 ${
+                hasChatStarted ? 'pt-3 sm:pt-8' : 'pt-5 sm:pt-12'
               }`}
             >
               <AnimatePresence initial={false}>
@@ -589,7 +622,7 @@ export default function Home() {
                 )}
               </div>
 
-              <div className="shrink-0 mt-auto pt-4 sm:pt-6 bg-background">
+              <div className="shrink-0 mt-auto pt-3 sm:pt-6 bg-background">
                 <form onSubmit={handleChatSubmit} className="flex flex-col sm:flex-row gap-3">
                   <input
                     type="text"
