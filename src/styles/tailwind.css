@@ -20,3 +20,43 @@
     cursor: default;
   }
 }
+
+@layer utilities {
+  @keyframes wave-hand {
+    0%,
+    100% {
+      transform: rotate(0deg);
+    }
+
+    12% {
+      transform: rotate(14deg);
+    }
+
+    24% {
+      transform: rotate(-8deg);
+    }
+
+    36% {
+      transform: rotate(14deg);
+    }
+
+    48% {
+      transform: rotate(-4deg);
+    }
+
+    60% {
+      transform: rotate(10deg);
+    }
+
+    72% {
+      transform: rotate(0deg);
+    }
+  }
+
+  .wave-hand {
+    animation: wave-hand 1.5s ease-in-out infinite;
+    animation-delay: 0s;
+    transform-origin: 70% 70%;
+    will-change: transform;
+  }
+}

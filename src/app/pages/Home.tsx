@@ -690,13 +690,9 @@ export default function Home() {
                     <div className="flex-1 max-w-4xl">
                       <h1 className="text-3xl sm:text-4xl md:text-5xl tracking-tight" style={{ fontWeight: 800, lineHeight: 1.05 }}>
                         {t.chatbot.greeting}{' '}
-                        <motion.span
-                          className="inline-block"
-                          animate={{ rotate: [0, 14, -8, 14, -4, 10, 0] }}
-                          transition={{ duration: 1.5, repeat: Infinity, repeatDelay: 1 }}
-                        >
+                        <span className="wave-hand inline-block">
                           👋
-                        </motion.span>
+                        </span>
                         ,
                         <br />
                         {t.chatbot.welcome}
@@ -719,7 +715,7 @@ export default function Home() {
                           : 'bg-muted/50 text-foreground border border-border/50'
                       }`}
                     >
-                      <p className="text-base sm:text-lg leading-relaxed">{renderChatMessageContent(message.content)}</p>
+                      <p className="whitespace-pre-line text-base sm:text-lg leading-relaxed">{renderChatMessageContent(message.content)}</p>
                       {message.download && (
                         <button
                           type="button"

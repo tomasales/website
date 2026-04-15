@@ -263,6 +263,65 @@ function mentionsCv(text: string) {
   );
 }
 
+function wantsContactDetails(text: string) {
+  const normalizedText = compactIntentText(text);
+
+  return (
+    normalizedText.includes('contacto') ||
+    normalizedText.includes('contact') ||
+    normalizedText.includes('datos de contacto') ||
+    normalizedText.includes('tus datos') ||
+    normalizedText.includes('sus datos') ||
+    normalizedText.includes('mail') ||
+    normalizedText.includes('email') ||
+    normalizedText.includes('correo') ||
+    normalizedText.includes('telefono') ||
+    normalizedText.includes('phone') ||
+    normalizedText.includes('celular') ||
+    normalizedText.includes('whatsapp') ||
+    normalizedText.includes('linkedin') ||
+    normalizedText.includes('linked in') ||
+    normalizedText.includes('website') ||
+    normalizedText.includes('sitio web') ||
+    normalizedText.includes('portfolio') ||
+    normalizedText.includes('thankstomas')
+  );
+}
+
+function buildContactDetailsPayload(replyLanguage: Language) {
+  const answer =
+    replyLanguage === 'ES'
+      ? [
+          'Claro, estos son mis datos de contacto:',
+          '- Mail: [salesdurantomas@gmail.com](mailto:salesdurantomas@gmail.com)',
+          '- Teléfono: [+54 9 351 594 0926](tel:+5493515940926)',
+          '- LinkedIn: [LinkedIn](https://www.linkedin.com/in/tomasales/)',
+          '- Web: [thankstomas.com](https://thankstomas.com)',
+        ].join('\n')
+      : [
+          'Sure, here are my contact details:',
+          '- Email: [salesdurantomas@gmail.com](mailto:salesdurantomas@gmail.com)',
+          '- Phone: [+54 9 351 594 0926](tel:+5493515940926)',
+          '- LinkedIn: [LinkedIn](https://www.linkedin.com/in/tomasales/)',
+          '- Website: [thankstomas.com](https://thankstomas.com)',
+        ].join('\n');
+
+  return { answer };
+}
+
+function mentionsDownload(text: string) {
+  const normalizedText = compactIntentText(text);
+  return (
+    normalizedText.includes('descarg') ||
+    normalizedText.includes('bajar') ||
+    normalizedText.includes('pasame') ||
+    normalizedText.includes('mandame') ||
+    normalizedText.includes('download') ||
+    normalizedText.includes('share') ||
+    normalizedText.includes('link')
+  );
+}
+
 function wantsCvDownload(text: string) {
   const normalizedText = compactIntentText(text);
   const asksForDownload =
@@ -281,6 +340,12 @@ function wantsCvDownload(text: string) {
     normalizedText.includes('link');
 
   return mentionsCv(text) && asksForDownload;
+}
+
+function conversationRecentlyMentionedCv(messages: ChatMessage[]) {
+  return messages
+    .slice(-6)
+    .some((message) => mentionsCv(message.content) || (message.role === 'assistant' && mentionsDownload(message.content)));
 }
 
 function assistantAskedCvLanguage(messages: ChatMessage[]) {
@@ -333,7 +398,9 @@ function getCvDownloadPayload(messages: ChatMessage[], replyLanguage: Language) 
 
   const cvLanguage = detectCvLanguage(lastMessage.content);
   const shouldHandleCv =
+    mentionsCv(lastMessage.content) ||
     wantsCvDownload(lastMessage.content) ||
+    (Boolean(cvLanguage) && conversationRecentlyMentionedCv(messages.slice(0, -1))) ||
     (Boolean(cvLanguage) && assistantAskedCvLanguage(messages.slice(0, -1)));
 
   if (!shouldHandleCv) return null;
@@ -408,6 +475,10 @@ export async function handleChatRequest(request: Request, overrides?: EnvOverrid
   const cvDownloadPayload = getCvDownloadPayload(messages, replyLanguage);
   if (cvDownloadPayload) {
     return json(cvDownloadPayload);
+  }
+
+  if (wantsContactDetails(lastMessage.content)) {
+    return json(buildContactDetailsPayload(replyLanguage));
   }
 
   const { AI_PROVIDER, GEMINI_API_KEY, GEMINI_MODEL, OPENAI_API_KEY, OPENAI_MODEL } = resolveEnv(overrides);
