@@ -193,6 +193,8 @@ function detectReplyLanguage(text: string, fallback: Language): Language {
     'porque',
     'proyectos',
     'que',
+    'referencia',
+    'referencias',
     'recomendas',
     'quien',
     'quiero',
@@ -206,6 +208,8 @@ function detectReplyLanguage(text: string, fallback: Language): Language {
     'tiene',
     'tienes',
     'tenes',
+    'testimonio',
+    'testimonios',
     'tu',
     'ubicacion',
     'vos',
@@ -239,10 +243,12 @@ function detectReplyLanguage(text: string, fallback: Language): Language {
     'personal',
     'projects',
     'recipes',
+    'references',
     'resume',
     'skills',
     'spanish',
     'tell',
+    'testimonials',
     'tools',
     'tomas',
     'what',
@@ -262,8 +268,10 @@ function detectReplyLanguage(text: string, fallback: Language): Language {
   if (normalizedText.includes('por que') || normalizedText.includes('porque')) spanishScore += 2;
   if (normalizedText.includes('deberia contratar') || normalizedText.includes('contratarlo')) spanishScore += 3;
   if (normalizedText.includes('pasatiempo')) spanishScore += 3;
+  if (normalizedText.includes('referencia') || normalizedText.includes('testimonio')) spanishScore += 3;
   if (normalizedText.includes('what does') || normalizedText.includes('tell me')) englishScore += 2;
   if (normalizedText.includes('why should') || normalizedText.includes('hire')) englishScore += 2;
+  if (normalizedText.includes('references') || normalizedText.includes('testimonials')) englishScore += 3;
 
   if (spanishScore > englishScore) return 'ES';
   if (englishScore > spanishScore) return 'EN';
@@ -404,8 +412,8 @@ function buildCommonAnswerPayload(text: string, replyLanguage: Language) {
     return {
       answer:
         replyLanguage === 'ES'
-          ? 'Tomas está en Córdoba, Argentina (GMT-3) y suele trabajar de 9:00 AM a 6:00 PM.'
-          : 'Tomas is based in Córdoba, Argentina (GMT-3) and usually works from 9:00 AM to 6:00 PM.',
+          ? 'Estoy en Córdoba, Argentina (GMT-3), y suelo trabajar de 9:00 AM a 6:00 PM.'
+          : 'I’m based in Córdoba, Argentina (GMT-3), and I usually work from 9:00 AM to 6:00 PM.',
     };
   }
 
@@ -413,8 +421,8 @@ function buildCommonAnswerPayload(text: string, replyLanguage: Language) {
     return {
       answer:
         replyLanguage === 'ES'
-          ? 'Tomas está en Córdoba, Argentina. Su zona horaria es GMT-3.'
-          : 'Tomas is based in Córdoba, Argentina. His timezone is GMT-3.',
+          ? 'Estoy en Córdoba, Argentina. Mi zona horaria es GMT-3.'
+          : 'I’m based in Córdoba, Argentina. My timezone is GMT-3.',
     };
   }
 
