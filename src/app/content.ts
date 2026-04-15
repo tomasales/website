@@ -71,22 +71,6 @@ export const content = {
           avatar: 'FG',
           avatarImage: null,
         },
-        {
-          name: 'Miguel Rodriguez',
-          company: 'HealthCare Solutions',
-          review:
-            'Working with Tomas was a game-changer. He understood our complex requirements and created an intuitive interface our users love.',
-          avatar: 'MR',
-          avatarImage: null,
-        },
-        {
-          name: 'Emma Thompson',
-          company: 'E-commerce Plus',
-          review:
-            'Professional, creative, and efficient. Tomas transformed our vision into a beautiful, functional platform. Highly recommend!',
-          avatar: 'ET',
-          avatarImage: null,
-        },
       ],
       form: {
         name: 'Your name',
@@ -187,22 +171,6 @@ export const content = {
           review:
             'Tomas se destaca por su profesionalismo, creatividad y autenticidad, además de una gran capacidad para explicar conceptos y decisiones con claridad.',
           avatar: 'FG',
-          avatarImage: null,
-        },
-        {
-          name: 'Miguel Rodriguez',
-          company: 'HealthCare Solutions',
-          review:
-            'Trabajar con Tomas fue un cambio total. Entendió nuestros requisitos complejos y creó una interfaz intuitiva que nuestros usuarios aman.',
-          avatar: 'MR',
-          avatarImage: null,
-        },
-        {
-          name: 'Emma Thompson',
-          company: 'E-commerce Plus',
-          review:
-            'Profesional, creativo y eficiente. Tomas transformó nuestra visión en una plataforma hermosa y funcional. ¡Muy recomendable!',
-          avatar: 'ET',
           avatarImage: null,
         },
       ],
