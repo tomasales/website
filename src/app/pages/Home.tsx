@@ -8,9 +8,16 @@ import { content } from '../content';
 import { useLanguage } from '../language';
 
 type ViewMode = 'chatbot' | 'page';
+type ChatDownloadAction = {
+  href: string;
+  label: string;
+  fileName: string;
+  language: 'EN' | 'ES';
+};
 type ChatMessage = {
   role: 'user' | 'assistant';
   content: string;
+  download?: ChatDownloadAction;
 };
 
 const SECTION_IDS = ['home', 'projects', 'about', 'contact'] as const;
@@ -59,6 +66,7 @@ export default function Home() {
   const chatMessagesRef = useRef<HTMLDivElement | null>(null);
 
   const t = content[language];
+  const hasChatStarted = chatMessages.length > 0 || isChatLoading;
 
   useEffect(() => {
     if (!emblaApi) return;
@@ -153,6 +161,32 @@ export default function Home() {
     setViewMode(mode);
     setShowModeTip(false);
     setCvDropdownOpen(false);
+    setMobileMenuOpen(false);
+
+    requestAnimationFrame(() => {
+      if (mode === 'page') {
+        const element = document.getElementById('home');
+        element?.scrollIntoView({ behavior: 'smooth' });
+        return;
+      }
+
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  };
+
+  const handleLanguageChange = (nextLanguage: typeof language) => {
+    setLanguage(nextLanguage);
+    setMobileMenuOpen(false);
+
+    requestAnimationFrame(() => {
+      if (viewMode === 'page') {
+        const element = document.getElementById('home');
+        element?.scrollIntoView({ behavior: 'smooth' });
+        return;
+      }
+
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
   };
 
   const handleLogoClick = () => {
@@ -197,7 +231,12 @@ export default function Home() {
         }),
       });
 
-      const data = (await response.json()) as { answer?: string; error?: string; code?: string };
+      const data = (await response.json()) as {
+        answer?: string;
+        download?: ChatDownloadAction;
+        error?: string;
+        code?: string;
+      };
       if (!response.ok || !data.answer) {
         const errorMessage =
           data.code === 'invalid_api_key'
@@ -209,7 +248,10 @@ export default function Home() {
         throw new Error(errorMessage);
       }
 
-      setChatMessages((prev) => [...prev, { role: 'assistant', content: data.answer! }]);
+      setChatMessages((prev) => [
+        ...prev,
+        { role: 'assistant', content: data.answer!, download: data.download },
+      ]);
     } catch (error) {
       console.error('Chat request failed', error);
       const message = error instanceof Error && error.message ? error.message : t.chatbot.error;
@@ -286,9 +328,9 @@ export default function Home() {
 
     return (
       <div className={`flex items-center bg-muted border border-border/70 ${wrapperClass}`}>
-        <button
+          <button
           type="button"
-          onClick={() => setLanguage('EN')}
+          onClick={() => handleLanguageChange('EN')}
           className={`${buttonClass} transition-all ${
             language === 'EN' ? 'bg-foreground text-background' : 'text-muted-foreground'
           }`}
@@ -298,7 +340,7 @@ export default function Home() {
         </button>
         <button
           type="button"
-          onClick={() => setLanguage('ES')}
+          onClick={() => handleLanguageChange('ES')}
           className={`${buttonClass} transition-all ${
             language === 'ES' ? 'bg-foreground text-background' : 'text-muted-foreground'
           }`}
@@ -478,27 +520,43 @@ export default function Home() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -14 }}
             transition={{ duration: 0.22, ease: 'easeOut' }}
-            className="h-dvh max-h-dvh overflow-hidden pt-24 pb-4 sm:min-h-screen sm:h-auto sm:max-h-none sm:overflow-visible sm:pt-36 sm:pb-20 flex items-start"
+            className="h-[100svh] max-h-[100svh] overflow-hidden pt-24 pb-[max(1rem,env(safe-area-inset-bottom))] sm:min-h-screen sm:h-auto sm:max-h-none sm:overflow-visible sm:pt-36 sm:pb-20 flex items-start"
           >
           <div className="max-w-6xl mx-auto px-6 lg:px-12 w-full h-full">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
-              className="h-full min-h-0 sm:min-h-[calc(100vh-10rem)] flex flex-col pt-6 pb-4 sm:py-12"
+              className={`h-full min-h-0 sm:min-h-[calc(100vh-10rem)] flex flex-col pb-0 sm:py-12 ${
+                hasChatStarted ? 'pt-4' : 'pt-6'
+              }`}
             >
-              <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 mb-6 sm:mb-16">
-                <div className="w-[88px] h-[88px] sm:w-[104px] sm:h-[104px] rounded-[28px] bg-gradient-to-br from-[#dfe4ff] to-[#f1e6ff] overflow-hidden flex-shrink-0" />
-                <div className="flex-1 max-w-4xl">
-                  <h1 className="text-3xl sm:text-4xl md:text-5xl tracking-tight" style={{ fontWeight: 800, lineHeight: 1.05 }}>
-                    {t.chatbot.greeting}
-                    <br />
-                    {t.chatbot.welcome}
-                  </h1>
-                </div>
-              </div>
+              <AnimatePresence initial={false}>
+                {!hasChatStarted && (
+                  <motion.div
+                    key="chatbot-intro"
+                    initial={{ opacity: 0, y: -8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -12, height: 0, marginBottom: 0 }}
+                    transition={{ duration: 0.22, ease: 'easeOut' }}
+                    className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 mb-6 sm:mb-16 overflow-hidden"
+                  >
+                    <div className="w-[88px] h-[88px] sm:w-[104px] sm:h-[104px] rounded-[28px] bg-gradient-to-br from-[#dfe4ff] to-[#f1e6ff] overflow-hidden flex-shrink-0" />
+                    <div className="flex-1 max-w-4xl">
+                      <h1 className="text-3xl sm:text-4xl md:text-5xl tracking-tight" style={{ fontWeight: 800, lineHeight: 1.05 }}>
+                        {t.chatbot.greeting}
+                        <br />
+                        {t.chatbot.welcome}
+                      </h1>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
-              <div ref={chatMessagesRef} className="flex-1 min-h-0 space-y-4 overflow-y-auto pr-1">
+              <div
+                ref={chatMessagesRef}
+                className={`flex-1 min-h-0 space-y-4 overflow-y-auto pr-1 ${hasChatStarted ? 'pt-2 pb-4' : ''}`}
+              >
                 {chatMessages.map((message, index) => (
                   <div key={`${message.role}-${index}`} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                     <div
@@ -509,6 +567,16 @@ export default function Home() {
                       }`}
                     >
                       <p className="text-base sm:text-lg leading-relaxed">{message.content}</p>
+                      {message.download && (
+                        <a
+                          href={`${import.meta.env.BASE_URL}${message.download.href}`}
+                          download={message.download.fileName}
+                          className="mt-4 inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2 text-sm text-primary-foreground transition-colors hover:bg-primary/90"
+                          style={{ fontWeight: 700 }}
+                        >
+                          {message.download.label}
+                        </a>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -521,7 +589,7 @@ export default function Home() {
                 )}
               </div>
 
-              <div className="pt-4 sm:pt-6 mt-4 sm:mt-8 bg-background">
+              <div className="shrink-0 mt-auto pt-4 sm:pt-6 bg-background">
                 <form onSubmit={handleChatSubmit} className="flex flex-col sm:flex-row gap-3">
                   <input
                     type="text"

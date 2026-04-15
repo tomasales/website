@@ -23,6 +23,13 @@ type ChatRequestBody = {
 };
 
 type AIProvider = 'gemini' | 'openai';
+type CvDownloadLanguage = 'EN' | 'ES';
+type CvDownloadAction = {
+  href: string;
+  label: string;
+  fileName: string;
+  language: CvDownloadLanguage;
+};
 
 const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash';
 const DEFAULT_OPENAI_MODEL = 'gpt-5-mini';
@@ -119,6 +126,116 @@ function buildGeminiContents(messages: ChatMessage[]) {
   }));
 }
 
+function normalizeIntentText(text: string) {
+  return text
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+}
+
+function detectCvLanguage(text: string): CvDownloadLanguage | null {
+  const normalizedText = normalizeIntentText(text);
+
+  if (
+    normalizedText.includes('ingles') ||
+    normalizedText.includes('english') ||
+    normalizedText === 'en' ||
+    normalizedText.includes(' cv en')
+  ) {
+    return 'EN';
+  }
+
+  if (
+    normalizedText.includes('espanol') ||
+    normalizedText.includes('spanish') ||
+    normalizedText.includes('castellano') ||
+    normalizedText === 'es' ||
+    normalizedText.includes(' cv es')
+  ) {
+    return 'ES';
+  }
+
+  return null;
+}
+
+function wantsCvDownload(text: string) {
+  const normalizedText = normalizeIntentText(text);
+  const mentionsCv =
+    normalizedText.includes('cv') ||
+    normalizedText.includes('curriculum') ||
+    normalizedText.includes('resume');
+  const asksForDownload =
+    normalizedText.includes('descarg') ||
+    normalizedText.includes('bajar') ||
+    normalizedText.includes('pasame') ||
+    normalizedText.includes('mandame') ||
+    normalizedText.includes('download') ||
+    normalizedText.includes('send') ||
+    normalizedText.includes('get') ||
+    normalizedText.includes('link');
+
+  return mentionsCv && asksForDownload;
+}
+
+function assistantAskedCvLanguage(messages: ChatMessage[]) {
+  const lastAssistantMessage = [...messages].reverse().find((message) => message.role === 'assistant');
+  if (!lastAssistantMessage) return false;
+
+  const normalizedText = normalizeIntentText(lastAssistantMessage.content);
+  return (
+    (normalizedText.includes('cv') || normalizedText.includes('resume')) &&
+    (normalizedText.includes('idioma') ||
+      normalizedText.includes('language') ||
+      normalizedText.includes('espanol') ||
+      normalizedText.includes('spanish')) &&
+    (normalizedText.includes('ingles') || normalizedText.includes('english'))
+  );
+}
+
+function buildCvDownloadPayload(siteLanguage: Language, cvLanguage: CvDownloadLanguage) {
+  const isSpanishSite = siteLanguage === 'ES';
+  const isSpanishCv = cvLanguage === 'ES';
+  const href = isSpanishCv ? 'Curriculum/CV_ES.pdf' : 'Curriculum/CV_EN.pdf';
+  const label = isSpanishSite
+    ? `Descargar CV en ${isSpanishCv ? 'español' : 'inglés'}`
+    : `Download ${isSpanishCv ? 'Spanish' : 'English'} CV`;
+
+  return {
+    answer: isSpanishSite
+      ? `Sí, tocá acá y se descarga el CV en ${isSpanishCv ? 'español' : 'inglés'}.`
+      : `Yes, tap here to download the ${isSpanishCv ? 'Spanish' : 'English'} CV.`,
+    download: {
+      href,
+      label,
+      fileName: isSpanishCv ? 'CV_ES.pdf' : 'CV_EN.pdf',
+      language: cvLanguage,
+    } satisfies CvDownloadAction,
+  };
+}
+
+function getCvDownloadPayload(messages: ChatMessage[], siteLanguage: Language) {
+  const lastMessage = messages[messages.length - 1];
+  if (!lastMessage || lastMessage.role !== 'user') return null;
+
+  const cvLanguage = detectCvLanguage(lastMessage.content);
+  const shouldHandleCv =
+    wantsCvDownload(lastMessage.content) ||
+    (Boolean(cvLanguage) && assistantAskedCvLanguage(messages.slice(0, -1)));
+
+  if (!shouldHandleCv) return null;
+
+  if (!cvLanguage) {
+    return {
+      answer:
+        siteLanguage === 'ES'
+          ? 'Sí, te lo paso. ¿Lo querés en español o en inglés?'
+          : 'Sure, I can share it. Would you like the Spanish or English version?',
+    };
+  }
+
+  return buildCvDownloadPayload(siteLanguage, cvLanguage);
+}
+
 async function generateGeminiAnswer(apiKey: string, model: string, language: Language, messages: ChatMessage[]) {
   const client = new GoogleGenAI({ apiKey });
   const response = await client.models.generateContent({
@@ -153,21 +270,6 @@ export async function handleChatRequest(request: Request, overrides?: EnvOverrid
     return json({ error: 'Method not allowed' }, 405);
   }
 
-  const { AI_PROVIDER, GEMINI_API_KEY, GEMINI_MODEL, OPENAI_API_KEY, OPENAI_MODEL } = resolveEnv(overrides);
-  const provider = resolveProvider(AI_PROVIDER, GEMINI_API_KEY, OPENAI_API_KEY);
-
-  if (!provider) {
-    return json({ error: 'Missing AI provider credentials' }, 500);
-  }
-
-  if (provider === 'gemini' && !GEMINI_API_KEY) {
-    return json({ error: 'Missing GEMINI_API_KEY' }, 500);
-  }
-
-  if (provider === 'openai' && !OPENAI_API_KEY) {
-    return json({ error: 'Missing OPENAI_API_KEY' }, 500);
-  }
-
   let body: ChatRequestBody;
 
   try {
@@ -186,6 +288,26 @@ export async function handleChatRequest(request: Request, overrides?: EnvOverrid
   const lastMessage = messages[messages.length - 1];
   if (!lastMessage || lastMessage.role !== 'user') {
     return json({ error: 'The last message must come from the user' }, 400);
+  }
+
+  const cvDownloadPayload = getCvDownloadPayload(messages, language);
+  if (cvDownloadPayload) {
+    return json(cvDownloadPayload);
+  }
+
+  const { AI_PROVIDER, GEMINI_API_KEY, GEMINI_MODEL, OPENAI_API_KEY, OPENAI_MODEL } = resolveEnv(overrides);
+  const provider = resolveProvider(AI_PROVIDER, GEMINI_API_KEY, OPENAI_API_KEY);
+
+  if (!provider) {
+    return json({ error: 'Missing AI provider credentials' }, 500);
+  }
+
+  if (provider === 'gemini' && !GEMINI_API_KEY) {
+    return json({ error: 'Missing GEMINI_API_KEY' }, 500);
+  }
+
+  if (provider === 'openai' && !OPENAI_API_KEY) {
+    return json({ error: 'Missing OPENAI_API_KEY' }, 500);
   }
 
   try {
