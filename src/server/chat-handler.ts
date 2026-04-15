@@ -221,7 +221,6 @@ function detectReplyLanguage(text: string, fallback: Language): Language {
     'can',
     'cooking',
     'contact',
-    'cv',
     'design',
     'designer',
     'do',
@@ -275,6 +274,27 @@ function detectReplyLanguage(text: string, fallback: Language): Language {
 
   if (spanishScore > englishScore) return 'ES';
   if (englishScore > spanishScore) return 'EN';
+  return fallback;
+}
+
+function detectExplicitReplyLanguage(text: string): Language | null {
+  const spanishFallbackResult = detectReplyLanguage(text, 'ES');
+  const englishFallbackResult = detectReplyLanguage(text, 'EN');
+
+  return spanishFallbackResult === englishFallbackResult ? spanishFallbackResult : null;
+}
+
+function detectRecentConversationLanguage(messages: ChatMessage[], fallback: Language): Language {
+  const previousUserMessages = messages
+    .slice(0, -1)
+    .filter((message) => message.role === 'user')
+    .reverse();
+
+  for (const message of previousUserMessages) {
+    const language = detectExplicitReplyLanguage(message.content);
+    if (language) return language;
+  }
+
   return fallback;
 }
 
@@ -612,7 +632,8 @@ export async function handleChatRequest(request: Request, overrides?: EnvOverrid
     return json({ error: 'The last message must come from the user' }, 400);
   }
 
-  const replyLanguage = detectReplyLanguage(lastMessage.content, siteLanguage);
+  const conversationLanguage = detectRecentConversationLanguage(messages, siteLanguage);
+  const replyLanguage = detectReplyLanguage(lastMessage.content, conversationLanguage);
   const cvDownloadPayload = getCvDownloadPayload(messages, replyLanguage);
   if (cvDownloadPayload) {
     return json(cvDownloadPayload);
