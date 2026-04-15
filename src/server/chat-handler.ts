@@ -140,6 +140,98 @@ function compactIntentText(text: string) {
     .trim();
 }
 
+function detectReplyLanguage(text: string, fallback: Language): Language {
+  const normalizedText = compactIntentText(text);
+  const tokens = normalizedText.split(' ').filter(Boolean);
+  const rawText = text.toLowerCase();
+  let spanishScore = /[¿¡ñáéíóúü]/i.test(rawText) ? 2 : 0;
+  let englishScore = 0;
+
+  const spanishSignals = new Set([
+    'aca',
+    'al',
+    'como',
+    'con',
+    'contacto',
+    'cual',
+    'cuando',
+    'curriculum',
+    'de',
+    'decime',
+    'donde',
+    'el',
+    'en',
+    'es',
+    'espanol',
+    'experiencia',
+    'habla',
+    'hablas',
+    'herramientas',
+    'idioma',
+    'idiomas',
+    'ingles',
+    'la',
+    'me',
+    'mi',
+    'para',
+    'por',
+    'que',
+    'quien',
+    'quiero',
+    'sobre',
+    'su',
+    'tomas',
+    'trabaja',
+    'trabajas',
+    'tu',
+    'vos',
+  ]);
+  const englishSignals = new Set([
+    'about',
+    'are',
+    'can',
+    'contact',
+    'cv',
+    'design',
+    'designer',
+    'do',
+    'download',
+    'english',
+    'experience',
+    'for',
+    'he',
+    'his',
+    'how',
+    'is',
+    'languages',
+    'me',
+    'resume',
+    'skills',
+    'spanish',
+    'tell',
+    'tools',
+    'tomas',
+    'what',
+    'where',
+    'who',
+    'with',
+    'work',
+    'you',
+  ]);
+
+  for (const token of tokens) {
+    if (spanishSignals.has(token)) spanishScore += 1;
+    if (englishSignals.has(token)) englishScore += 1;
+  }
+
+  if (normalizedText.includes('que hace') || normalizedText.includes('quien es')) spanishScore += 2;
+  if (normalizedText.includes('what does') || normalizedText.includes('tell me')) englishScore += 2;
+
+  if (spanishScore > englishScore) return 'ES';
+  if (englishScore > spanishScore) return 'EN';
+  return fallback;
+}
+
 function detectCvLanguage(text: string): CvDownloadLanguage | null {
   const normalizedText = compactIntentText(text);
 
@@ -214,16 +306,16 @@ function assistantAskedCvLanguage(messages: ChatMessage[]) {
   return Boolean(lastUserBeforeQuestion && (wantsCvDownload(lastUserBeforeQuestion.content) || mentionsCv(lastUserBeforeQuestion.content)));
 }
 
-function buildCvDownloadPayload(siteLanguage: Language, cvLanguage: CvDownloadLanguage) {
-  const isSpanishSite = siteLanguage === 'ES';
+function buildCvDownloadPayload(replyLanguage: Language, cvLanguage: CvDownloadLanguage) {
+  const isSpanishReply = replyLanguage === 'ES';
   const isSpanishCv = cvLanguage === 'ES';
   const href = isSpanishCv ? 'Curriculum/CV_ES.pdf' : 'Curriculum/CV_EN.pdf';
-  const label = isSpanishSite
+  const label = isSpanishReply
     ? `Descargar CV en ${isSpanishCv ? 'español' : 'inglés'}`
     : `Download ${isSpanishCv ? 'Spanish' : 'English'} CV`;
 
   return {
-    answer: isSpanishSite
+    answer: isSpanishReply
       ? `Sí, tocá acá y se descarga el CV en ${isSpanishCv ? 'español' : 'inglés'}.`
       : `Yes, tap here to download the ${isSpanishCv ? 'Spanish' : 'English'} CV.`,
     download: {
@@ -235,7 +327,7 @@ function buildCvDownloadPayload(siteLanguage: Language, cvLanguage: CvDownloadLa
   };
 }
 
-function getCvDownloadPayload(messages: ChatMessage[], siteLanguage: Language) {
+function getCvDownloadPayload(messages: ChatMessage[], replyLanguage: Language) {
   const lastMessage = messages[messages.length - 1];
   if (!lastMessage || lastMessage.role !== 'user') return null;
 
@@ -249,22 +341,22 @@ function getCvDownloadPayload(messages: ChatMessage[], siteLanguage: Language) {
   if (!cvLanguage) {
     return {
       answer:
-        siteLanguage === 'ES'
+        replyLanguage === 'ES'
           ? 'Sí, te lo paso. ¿Lo querés en español o en inglés?'
           : 'Sure, I can share it. Would you like the Spanish or English version?',
     };
   }
 
-  return buildCvDownloadPayload(siteLanguage, cvLanguage);
+  return buildCvDownloadPayload(replyLanguage, cvLanguage);
 }
 
-async function generateGeminiAnswer(apiKey: string, model: string, language: Language, messages: ChatMessage[]) {
+async function generateGeminiAnswer(apiKey: string, model: string, language: Language, replyLanguage: Language, messages: ChatMessage[]) {
   const client = new GoogleGenAI({ apiKey });
   const response = await client.models.generateContent({
     model,
     contents: buildGeminiContents(messages),
     config: {
-      systemInstruction: buildSystemPrompt(language),
+      systemInstruction: buildSystemPrompt(language, replyLanguage),
       maxOutputTokens: 280,
       thinkingConfig: {
         thinkingBudget: 0,
@@ -275,11 +367,11 @@ async function generateGeminiAnswer(apiKey: string, model: string, language: Lan
   return response.text?.trim();
 }
 
-async function generateOpenAIAnswer(apiKey: string, model: string, language: Language, messages: ChatMessage[]) {
+async function generateOpenAIAnswer(apiKey: string, model: string, language: Language, replyLanguage: Language, messages: ChatMessage[]) {
   const client = new OpenAI({ apiKey });
   const response = await client.responses.create({
     model,
-    instructions: buildSystemPrompt(language),
+    instructions: buildSystemPrompt(language, replyLanguage),
     input: messages,
     max_output_tokens: 280,
   });
@@ -300,7 +392,7 @@ export async function handleChatRequest(request: Request, overrides?: EnvOverrid
     return json({ error: 'Invalid JSON body' }, 400);
   }
 
-  const language: Language = body.language === 'ES' ? 'ES' : 'EN';
+  const siteLanguage: Language = body.language === 'ES' ? 'ES' : 'EN';
   const messages = normalizeMessages(body.messages);
 
   if (messages.length === 0) {
@@ -312,7 +404,8 @@ export async function handleChatRequest(request: Request, overrides?: EnvOverrid
     return json({ error: 'The last message must come from the user' }, 400);
   }
 
-  const cvDownloadPayload = getCvDownloadPayload(messages, language);
+  const replyLanguage = detectReplyLanguage(lastMessage.content, siteLanguage);
+  const cvDownloadPayload = getCvDownloadPayload(messages, replyLanguage);
   if (cvDownloadPayload) {
     return json(cvDownloadPayload);
   }
@@ -335,8 +428,8 @@ export async function handleChatRequest(request: Request, overrides?: EnvOverrid
   try {
     const answer =
       provider === 'gemini'
-        ? await generateGeminiAnswer(GEMINI_API_KEY!, GEMINI_MODEL, language, messages)
-        : await generateOpenAIAnswer(OPENAI_API_KEY!, OPENAI_MODEL, language, messages);
+        ? await generateGeminiAnswer(GEMINI_API_KEY!, GEMINI_MODEL, siteLanguage, replyLanguage, messages)
+        : await generateOpenAIAnswer(OPENAI_API_KEY!, OPENAI_MODEL, siteLanguage, replyLanguage, messages);
 
     if (!answer) {
       return json({ error: 'Empty AI response' }, 502);

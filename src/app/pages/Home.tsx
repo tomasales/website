@@ -1,4 +1,4 @@
-import { type FormEvent, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { type FormEvent, type ReactNode, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import { AnimatePresence, motion } from 'motion/react';
 import { ArrowUpRight, Menu, Send, X } from 'lucide-react';
@@ -45,6 +45,86 @@ function PageIcon({ className = 'w-4 h-4' }: { className?: string }) {
       <polyline points="14 2 14 8 20 8" />
     </svg>
   );
+}
+
+function getContactHref(value: string) {
+  const normalizedValue = value.toLowerCase().replace(/\.$/, '');
+
+  if (normalizedValue === 'salesdurantomas@gmail.com') return 'mailto:salesdurantomas@gmail.com';
+  if (normalizedValue.includes('351') && normalizedValue.includes('594') && normalizedValue.includes('0926')) {
+    return 'tel:+5493515940926';
+  }
+  if (normalizedValue.includes('linkedin.com/in/tomasales')) return 'https://www.linkedin.com/in/tomasales/';
+  if (normalizedValue === 'thankstomas.com') return 'https://thankstomas.com';
+  if (normalizedValue.startsWith('http://') || normalizedValue.startsWith('https://')) return value.replace(/\.$/, '');
+
+  return null;
+}
+
+function renderChatLink(href: string, label: ReactNode, key: string) {
+  const isExternal = href.startsWith('http://') || href.startsWith('https://');
+
+  return (
+    <a
+      key={key}
+      href={href}
+      target={isExternal ? '_blank' : undefined}
+      rel={isExternal ? 'noopener noreferrer' : undefined}
+      className="text-blue-600 underline underline-offset-2 transition-colors hover:text-blue-800"
+    >
+      {label}
+    </a>
+  );
+}
+
+function renderAutoLinkedText(text: string, keyPrefix: string) {
+  const nodes: ReactNode[] = [];
+  const contactPattern =
+    /(salesdurantomas@gmail\.com|\+54\s*9\s*351\s*594\s*0926|https?:\/\/(?:www\.)?linkedin\.com\/in\/tomasales\/?|(?:www\.)?linkedin\.com\/in\/tomasales\/?|thankstomas\.com)/gi;
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = contactPattern.exec(text))) {
+    const [matchedText] = match;
+    const href = getContactHref(matchedText);
+
+    if (match.index > lastIndex) {
+      nodes.push(text.slice(lastIndex, match.index));
+    }
+
+    nodes.push(href ? renderChatLink(href, matchedText.replace(/\.$/, ''), `${keyPrefix}-auto-${match.index}`) : matchedText);
+    lastIndex = match.index + matchedText.length;
+  }
+
+  if (lastIndex < text.length) {
+    nodes.push(text.slice(lastIndex));
+  }
+
+  return nodes;
+}
+
+function renderChatMessageContent(text: string) {
+  const nodes: ReactNode[] = [];
+  const markdownLinkPattern = /\[([^\]]+)\]\((mailto:[^)]+|tel:[^)]+|https?:\/\/[^)]+)\)/g;
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = markdownLinkPattern.exec(text))) {
+    const [matchedText, label, href] = match;
+
+    if (match.index > lastIndex) {
+      nodes.push(...renderAutoLinkedText(text.slice(lastIndex, match.index), `plain-${lastIndex}`));
+    }
+
+    nodes.push(renderChatLink(href, label, `markdown-${match.index}`));
+    lastIndex = match.index + matchedText.length;
+  }
+
+  if (lastIndex < text.length) {
+    nodes.push(...renderAutoLinkedText(text.slice(lastIndex), `plain-${lastIndex}`));
+  }
+
+  return nodes;
 }
 
 export default function Home() {
@@ -639,7 +719,7 @@ export default function Home() {
                           : 'bg-muted/50 text-foreground border border-border/50'
                       }`}
                     >
-                      <p className="text-base sm:text-lg leading-relaxed">{message.content}</p>
+                      <p className="text-base sm:text-lg leading-relaxed">{renderChatMessageContent(message.content)}</p>
                       {message.download && (
                         <button
                           type="button"

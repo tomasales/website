@@ -19,7 +19,9 @@ Based in: Córdoba, Argentina.
 Primary specialty: UX/UI.
 Experience: 9 years.
 Website: thankstomas.com.
-Email: salesdurantos@gmail.com.
+Phone: +54 9 351 594 0926.
+Email: salesdurantomas@gmail.com.
+LinkedIn: https://www.linkedin.com/in/tomasales/.
 
 Professional summary:
 ${t.about.bio}
@@ -28,6 +30,14 @@ CV profile:
 - Tomas graduated with honors as a Graphic and Advertising Designer from La Metro Escuela de Diseño in 2019.
 - Native language: Spanish.
 - English level: advanced, B2.
+
+Education:
+- AI Designer - Interaction Design Foundation. Córdoba, Argentina (Virtual), 2026.
+- Scrum Master - Udemy. Córdoba, Argentina (Virtual), 2022.
+- Desarrollo Web - Coderhouse. Córdoba, Argentina (Virtual), 2022.
+- UX/UI Design Avanzado - Coderhouse. Córdoba, Argentina (Virtual), 2022.
+- UX Research - Design Core Academy. Córdoba, Argentina (Virtual), 2021.
+- Design Thinking - Interaction Design Foundation. Córdoba, Argentina (Virtual), 2019.
 
 Current experience:
 - Project Lead, Product Analyst and UX Designer at Avature, 2023 to present.
@@ -72,17 +82,18 @@ Other portfolio facts:
 - The site lets visitors download a CV in English and Spanish.
 - If a visitor asks about languages, say Tomas speaks native Spanish and advanced English (B2).
 - If a visitor asks about tools, answer from the Software and tools list.
+- If a visitor asks for contact details, use these exact clickable Markdown links: [salesdurantomas@gmail.com](mailto:salesdurantomas@gmail.com), [+54 9 351 594 0926](tel:+5493515940926), [LinkedIn](https://www.linkedin.com/in/tomasales/), [thankstomas.com](https://thankstomas.com).
 - If someone asks for something that is not in this context, be honest and say you do not want to invent details.
 `.trim();
 }
 
-export function buildSystemPrompt(language: Language) {
-  const replyLanguage =
-    language === 'ES'
+export function buildSystemPrompt(language: Language, replyLanguage = language) {
+  const replyLanguageInstruction =
+    replyLanguage === 'ES'
       ? 'Respond in Rioplatense Spanish, naturally and clearly.'
       : 'Respond in natural English.';
   const contactHint =
-    language === 'ES'
+    replyLanguage === 'ES'
       ? 'Si no sabes una respuesta con certeza, decilo claramente y sugeri escribir por el formulario o LinkedIn.'
       : "If you are not sure about something, say so clearly and suggest reaching out through the contact form or LinkedIn.";
 
@@ -93,7 +104,8 @@ Keep answers concise, warm, and useful.
 Only rely on the portfolio context below and the user's conversation.
 Do not invent companies, achievements, years, certifications, links, salaries, locations, or contact details that are not present in the context.
 If the user asks to download Tomas's CV, ask whether they want the Spanish or English version unless they already specified a language.
-${replyLanguage}
+When sharing email, phone, LinkedIn or website, format them as Markdown links so they are clickable.
+${replyLanguageInstruction}
 ${contactHint}
 
 Portfolio context:
