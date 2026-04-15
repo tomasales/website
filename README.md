@@ -21,6 +21,8 @@
 
   Recommended setup:
   Use `AI_PROVIDER=gemini` with a `GEMINI_API_KEY` if you want to start on the Gemini free tier.
+  Prefer `GEMINI_MODEL=gemini-2.5-flash-lite` to get more room from the free quota.
+  The chat answers common portfolio questions locally before calling Gemini, which helps reduce API usage.
 
   Local development:
   Run `npm run dev` after setting your provider variables in `.env.local`.

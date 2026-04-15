@@ -103,6 +103,34 @@ function renderAutoLinkedText(text: string, keyPrefix: string) {
   return nodes;
 }
 
+function renderBoldAndAutoLinkedText(text: string, keyPrefix: string) {
+  const nodes: ReactNode[] = [];
+  const boldPattern = /\*\*([^*]+)\*\*/g;
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = boldPattern.exec(text))) {
+    const [matchedText, boldText] = match;
+
+    if (match.index > lastIndex) {
+      nodes.push(...renderAutoLinkedText(text.slice(lastIndex, match.index), `${keyPrefix}-plain-${lastIndex}`));
+    }
+
+    nodes.push(
+      <strong key={`${keyPrefix}-bold-${match.index}`} className="font-semibold">
+        {renderAutoLinkedText(boldText, `${keyPrefix}-bold-inner-${match.index}`)}
+      </strong>,
+    );
+    lastIndex = match.index + matchedText.length;
+  }
+
+  if (lastIndex < text.length) {
+    nodes.push(...renderAutoLinkedText(text.slice(lastIndex), `${keyPrefix}-plain-${lastIndex}`));
+  }
+
+  return nodes;
+}
+
 function renderChatMessageContent(text: string) {
   const nodes: ReactNode[] = [];
   const markdownLinkPattern = /\[([^\]]+)\]\((mailto:[^)]+|tel:[^)]+|https?:\/\/[^)]+)\)/g;
@@ -113,7 +141,7 @@ function renderChatMessageContent(text: string) {
     const [matchedText, label, href] = match;
 
     if (match.index > lastIndex) {
-      nodes.push(...renderAutoLinkedText(text.slice(lastIndex, match.index), `plain-${lastIndex}`));
+      nodes.push(...renderBoldAndAutoLinkedText(text.slice(lastIndex, match.index), `plain-${lastIndex}`));
     }
 
     nodes.push(renderChatLink(href, label, `markdown-${match.index}`));
@@ -121,7 +149,7 @@ function renderChatMessageContent(text: string) {
   }
 
   if (lastIndex < text.length) {
-    nodes.push(...renderAutoLinkedText(text.slice(lastIndex), `plain-${lastIndex}`));
+    nodes.push(...renderBoldAndAutoLinkedText(text.slice(lastIndex), `plain-${lastIndex}`));
   }
 
   return nodes;

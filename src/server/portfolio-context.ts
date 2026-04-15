@@ -22,6 +22,8 @@ Website: thankstomas.com.
 Phone: +54 9 351 594 0926.
 Email: salesdurantomas@gmail.com.
 LinkedIn: https://www.linkedin.com/in/tomasales/.
+Timezone: Córdoba, Argentina, GMT-3.
+Working hours: 9:00 AM to 6:00 PM, GMT-3.
 
 Professional summary:
 ${t.about.bio}
@@ -116,6 +118,7 @@ Other portfolio facts:
 - The site lets visitors download a CV in English and Spanish.
 - If a visitor asks about languages, say Tomas speaks native Spanish and advanced English (B2).
 - If a visitor asks about tools, answer from the Software and tools list.
+- If a visitor asks about availability or working hours, say Tomas is in Córdoba, Argentina (GMT-3) and usually works from 9:00 AM to 6:00 PM.
 - If a visitor asks for contact details, use these exact clickable Markdown links: [salesdurantomas@gmail.com](mailto:salesdurantomas@gmail.com), [+54 9 351 594 0926](tel:+5493515940926), [LinkedIn](https://www.linkedin.com/in/tomasales/), [thankstomas.com](https://thankstomas.com).
 - If someone asks for something that is not in this context, be honest and say you do not want to invent details.
 `.trim();

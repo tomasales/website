@@ -112,7 +112,7 @@ export const content = {
       error: 'The AI is failing right now. Please try again in a moment.',
       authError: 'The configured AI API key is invalid. Please update the server environment variable.',
       quotaError:
-        'The AI service reached its usage limit right now. Try again later or check the API quota or billing settings.',
+        'The AI reached its free usage limit for now. Please try again later.',
       demoReply:
         'Thanks for your question! This is a demo response. In production, this would connect to an AI service to answer your questions about Tomas.',
     },
@@ -230,7 +230,7 @@ export const content = {
       error: 'La AI está fallando, por favor probá en un momento.',
       authError: 'La API key configurada para la AI no es valida. Actualiza la variable del servidor.',
       quotaError:
-        'El servicio de AI alcanzo su limite de uso por ahora. Proba mas tarde o revisa la cuota o billing del proveedor.',
+        'La AI llegó a su límite gratuito por ahora. Probá de nuevo más tarde.',
       demoReply:
         'Gracias por tu pregunta. Esta es una respuesta de demo. En produccion, esto se conectaria con un servicio de AI para responder sobre Tomas.',
     },
