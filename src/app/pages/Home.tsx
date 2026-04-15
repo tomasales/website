@@ -1,9 +1,11 @@
 import { type FormEvent, type ReactNode, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router';
-import { AnimatePresence, motion } from 'motion/react';
+import { AnimatePresence, LayoutGroup, motion, useScroll, useSpring, useTransform } from 'motion/react';
 import { ArrowUpRight, Menu, Send, X } from 'lucide-react';
 import useEmblaCarousel from 'embla-carousel-react';
 
+import meImage from '../../../me_image.png';
+import homeVideo from '../../../video_home.mp4';
 import { content } from '../content';
 import { useLanguage } from '../language';
 
@@ -21,6 +23,10 @@ type ChatMessage = {
 };
 
 const SECTION_IDS = ['home', 'projects', 'about', 'contact'] as const;
+const DESKTOP_MEDIA_QUERY = '(min-width: 1024px)';
+const LANGUAGE_TIP_TEXT = 'You can change the language here';
+const LANGUAGE_SELECTOR_REVEAL_DELAY = 260;
+const LANGUAGE_TIP_REVEAL_DELAY = 380;
 const TOGGLE_GLASS_CLASS =
   'bg-muted border border-border/80';
 const TOGGLE_INDICATOR_TRANSITION = {
@@ -28,6 +34,10 @@ const TOGGLE_INDICATOR_TRANSITION = {
   stiffness: 170,
   damping: 26,
   mass: 0.9,
+} as const;
+const LANGUAGE_TOGGLE_REVEAL_TRANSITION = {
+  duration: 0.36,
+  ease: [0.22, 1, 0.36, 1],
 } as const;
 
 function SparklesIcon({ className = 'w-4 h-4' }: { className?: string }) {
@@ -170,21 +180,96 @@ export default function Home() {
 
   const [viewMode, setViewMode] = useState<ViewMode>('chatbot');
   const [showModeTip, setShowModeTip] = useState(true);
+  const [showLanguageTip, setShowLanguageTip] = useState(false);
+  const [showDesktopLanguageToggle, setShowDesktopLanguageToggle] = useState(false);
   const [cvDropdownOpen, setCvDropdownOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [chatInput, setChatInput] = useState('');
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [isChatLoading, setIsChatLoading] = useState(false);
+  const [hasTypedInChat, setHasTypedInChat] = useState(false);
+  const [aiIntroLanguage, setAiIntroLanguage] = useState<'EN' | 'ES'>('EN');
+  const [typedIntroText, setTypedIntroText] = useState('');
+  const [aboutImageScrollDistance, setAboutImageScrollDistance] = useState(0);
   const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true });
   const [testimonialIndex, setTestimonialIndex] = useState(0);
   const [testimonialSlides, setTestimonialSlides] = useState<number[]>([]);
   const cvDropdownRef = useRef<HTMLDivElement | null>(null);
   const chatMessagesRef = useRef<HTMLDivElement | null>(null);
+  const aboutContentRef = useRef<HTMLDivElement | null>(null);
+  const aboutImageFrameRef = useRef<HTMLDivElement | null>(null);
+  const hasShownLanguageTipRef = useRef(false);
+  const pendingLanguageTipRef = useRef(false);
   const pendingTopScrollRef = useRef(false);
   const skipHashScrollOnceRef = useRef(false);
 
   const t = content[language];
-  const hasChatStarted = chatMessages.length > 0 || isChatLoading;
+  const aiIntroContent = content[aiIntroLanguage].chatbot;
+  const hasChatStarted = hasTypedInChat || chatMessages.length > 0 || isChatLoading;
+  const [typedIntroGreeting = '', typedIntroWelcome = ''] = typedIntroText.split('\n');
+  const isTypedIntroGreetingComplete = typedIntroGreeting.length >= aiIntroContent.greeting.length;
+  const { scrollYProgress: aboutScrollYProgress } = useScroll({
+    target: aboutContentRef,
+    offset: ['start start', 'end end'],
+  });
+  const aboutImageYRaw = useTransform(aboutScrollYProgress, [0, 1], [0, aboutImageScrollDistance]);
+  const aboutImageY = useSpring(aboutImageYRaw, { stiffness: 130, damping: 30, mass: 0.8 });
+
+  useEffect(() => {
+    if (viewMode === 'chatbot' && !hasChatStarted) setAiIntroLanguage('EN');
+  }, [hasChatStarted, viewMode]);
+
+  useLayoutEffect(() => {
+    const updateAboutImageDistance = () => {
+      const isDesktop = window.matchMedia(DESKTOP_MEDIA_QUERY).matches;
+      const contentHeight = aboutContentRef.current?.offsetHeight ?? 0;
+      const imageHeight = aboutImageFrameRef.current?.offsetHeight ?? 0;
+
+      setAboutImageScrollDistance(isDesktop ? Math.max(0, contentHeight - imageHeight) : 0);
+    };
+
+    updateAboutImageDistance();
+
+    const observer = new ResizeObserver(updateAboutImageDistance);
+
+    if (aboutContentRef.current) observer.observe(aboutContentRef.current);
+    if (aboutImageFrameRef.current) observer.observe(aboutImageFrameRef.current);
+
+    window.addEventListener('resize', updateAboutImageDistance);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', updateAboutImageDistance);
+    };
+  }, [language, viewMode]);
+
+  useEffect(() => {
+    if (viewMode !== 'chatbot' || hasChatStarted) return;
+
+    const intervalId = window.setInterval(() => {
+      setAiIntroLanguage((currentLanguage) => (currentLanguage === 'EN' ? 'ES' : 'EN'));
+    }, 5000);
+
+    return () => window.clearInterval(intervalId);
+  }, [hasChatStarted, viewMode]);
+
+  useEffect(() => {
+    if (viewMode !== 'chatbot' || hasChatStarted) return;
+
+    const fullText = `${aiIntroContent.greeting}\n${aiIntroContent.welcome}`;
+    let nextIndex = 0;
+
+    setTypedIntroText('');
+
+    const intervalId = window.setInterval(() => {
+      nextIndex += 1;
+      setTypedIntroText(fullText.slice(0, nextIndex));
+
+      if (nextIndex >= fullText.length) window.clearInterval(intervalId);
+    }, 28);
+
+    return () => window.clearInterval(intervalId);
+  }, [aiIntroContent.greeting, aiIntroContent.welcome, hasChatStarted, viewMode]);
 
   useEffect(() => {
     if (!emblaApi) return;
@@ -311,6 +396,42 @@ export default function Home() {
     return () => window.clearTimeout(timeoutId);
   }, [showModeTip, viewMode]);
 
+  useEffect(() => {
+    if (!showLanguageTip || viewMode !== 'page') return;
+
+    const timeoutId = window.setTimeout(() => {
+      setShowLanguageTip(false);
+    }, 10000);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [showLanguageTip, viewMode]);
+
+  useEffect(() => {
+    if (viewMode !== 'page') {
+      setShowDesktopLanguageToggle(false);
+      return;
+    }
+
+    setShowDesktopLanguageToggle(false);
+
+    const timeoutId = window.setTimeout(() => {
+      setShowDesktopLanguageToggle(true);
+    }, LANGUAGE_SELECTOR_REVEAL_DELAY);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [viewMode]);
+
+  useEffect(() => {
+    if (viewMode !== 'page' || !showDesktopLanguageToggle || !pendingLanguageTipRef.current) return;
+
+    const timeoutId = window.setTimeout(() => {
+      pendingLanguageTipRef.current = false;
+      setShowLanguageTip(true);
+    }, LANGUAGE_TIP_REVEAL_DELAY);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [showDesktopLanguageToggle, viewMode]);
+
   const resetModeScroll = () => {
     pendingTopScrollRef.current = true;
     skipHashScrollOnceRef.current = true;
@@ -325,8 +446,20 @@ export default function Home() {
   const handleViewModeChange = (mode: ViewMode) => {
     resetModeScroll();
 
+    const shouldShowLanguageTip =
+      mode === 'page' &&
+      viewMode !== 'page' &&
+      !hasShownLanguageTipRef.current;
+
+    if (shouldShowLanguageTip) {
+      hasShownLanguageTipRef.current = true;
+    }
+
+    pendingLanguageTipRef.current =
+      shouldShowLanguageTip && window.matchMedia(DESKTOP_MEDIA_QUERY).matches;
     setViewMode(mode);
     setShowModeTip(false);
+    setShowLanguageTip(shouldShowLanguageTip && !window.matchMedia(DESKTOP_MEDIA_QUERY).matches);
     setCvDropdownOpen(false);
     setMobileMenuOpen(false);
   };
@@ -335,7 +468,14 @@ export default function Home() {
     resetModeScroll();
 
     setLanguage(nextLanguage);
+    pendingLanguageTipRef.current = false;
+    setShowLanguageTip(false);
     setMobileMenuOpen(false);
+  };
+
+  const handleChatInputChange = (value: string) => {
+    setChatInput(value);
+    if (value.trim()) setHasTypedInChat(true);
   };
 
   const handleLogoClick = () => {
@@ -457,6 +597,7 @@ export default function Home() {
 
     return (
       <motion.div
+        layout
         layoutId={large ? undefined : 'view-mode-toggle-shell'}
         transition={TOGGLE_INDICATOR_TRANSITION}
         className={`relative grid grid-cols-2 items-center ${TOGGLE_GLASS_CLASS} ${wrapperClass}`}
@@ -507,35 +648,35 @@ export default function Home() {
       ? 'absolute left-2 top-2 bottom-2 w-[calc((100%_-_1rem)/2)] rounded-[20px] bg-foreground transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]'
       : 'absolute left-1 top-1 bottom-1 w-[calc((100%_-_0.5rem)/2)] rounded-full bg-foreground transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]';
 
-    return (
-      <div className={`relative grid grid-cols-2 items-center ${TOGGLE_GLASS_CLASS} ${wrapperClass}`}>
-        <span
-          aria-hidden="true"
-          className={indicatorClass}
-          style={{ transform: language === 'ES' ? 'translateX(100%)' : 'translateX(0)' }}
-        />
-        <button
-          type="button"
-          onClick={() => handleLanguageChange('EN')}
-          className={`${buttonClass} relative z-10 transition-colors duration-300 ${
-            language === 'EN' ? 'text-background' : 'text-muted-foreground hover:text-foreground'
-          }`}
-          style={{ fontWeight: large ? 700 : 600 }}
-        >
-          <span className="relative z-10">EN</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => handleLanguageChange('ES')}
-          className={`${buttonClass} relative z-10 transition-colors duration-300 ${
-            language === 'ES' ? 'text-background' : 'text-muted-foreground hover:text-foreground'
-          }`}
-          style={{ fontWeight: large ? 700 : 600 }}
-        >
-          <span className="relative z-10">ES</span>
-        </button>
-      </div>
-    );
+	    return (
+	      <div className={`relative grid grid-cols-2 items-center ${TOGGLE_GLASS_CLASS} ${wrapperClass}`}>
+	        <span
+	          aria-hidden="true"
+	          className={indicatorClass}
+	          style={{ transform: language === 'EN' ? 'translateX(100%)' : 'translateX(0)' }}
+	        />
+	        <button
+	          type="button"
+	          onClick={() => handleLanguageChange('ES')}
+	          className={`${buttonClass} relative z-10 transition-colors duration-300 ${
+	            language === 'ES' ? 'text-background' : 'text-muted-foreground hover:text-foreground'
+	          }`}
+	          style={{ fontWeight: large ? 700 : 600 }}
+	        >
+	          <span className="relative z-10">ES</span>
+	        </button>
+	        <button
+	          type="button"
+	          onClick={() => handleLanguageChange('EN')}
+	          className={`${buttonClass} relative z-10 transition-colors duration-300 ${
+	            language === 'EN' ? 'text-background' : 'text-muted-foreground hover:text-foreground'
+	          }`}
+	          style={{ fontWeight: large ? 700 : 600 }}
+	        >
+	          <span className="relative z-10">EN</span>
+	        </button>
+	      </div>
+	    );
   };
 
   return (
@@ -568,50 +709,103 @@ export default function Home() {
                   </button>
                 ))}
               </div>
-            ) : (
-              <div className="relative">
-                {renderViewModeToggle()}
-
-                <AnimatePresence>
-                  {showModeTip && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -10, scale: 0.98 }}
-                      animate={{ opacity: 1, y: [0, -4, 0, 4, 0], scale: 1 }}
-                      exit={{ opacity: 0, y: -8, scale: 0.98 }}
-                      transition={{
-                        opacity: { duration: 0.18, ease: 'easeOut' },
-                        scale: { duration: 0.18, ease: 'easeOut' },
-                        y: { duration: 6, repeat: Infinity, ease: 'easeInOut' },
-                      }}
-                      className="absolute top-full mt-3 left-1/2 -translate-x-1/2 whitespace-nowrap"
-                    >
-                      <div
-                        className="bg-muted text-foreground px-4 py-2 rounded-lg text-sm flex items-center gap-2 border border-border/50 shadow-sm"
-                        style={{ fontWeight: 500 }}
-                      >
-                        <span>👆</span>
-                        <span>{t.chatbot.tip}</span>
-                        <button
-                          type="button"
-                          onClick={() => setShowModeTip(false)}
-                          className="inline-flex items-center justify-center w-5 h-5 ml-1 rounded-full text-muted-foreground hover:text-foreground transition-colors"
-                          aria-label={language === 'ES' ? 'Cerrar sugerencia' : 'Close tip'}
-                        >
-                          <X className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            )}
+            ) : null}
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="hidden lg:flex items-center gap-3">
-              {viewMode === 'page' && renderViewModeToggle()}
-              {renderLanguageToggle()}
-            </div>
+            <LayoutGroup id="desktop-toggle-controls">
+              <motion.div layout className="hidden lg:flex items-center gap-3" transition={TOGGLE_INDICATOR_TRANSITION}>
+                <motion.div layout className="relative" transition={TOGGLE_INDICATOR_TRANSITION}>
+                  {renderViewModeToggle()}
+
+                  <AnimatePresence>
+                    {viewMode === 'chatbot' && showModeTip && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -10, scale: 0.98 }}
+                        animate={{ opacity: 1, y: [0, -4, 0, 4, 0], scale: 1 }}
+                        exit={{ opacity: 0, y: -8, scale: 0.98 }}
+                        transition={{
+                          opacity: { duration: 0.18, ease: 'easeOut' },
+                          scale: { duration: 0.18, ease: 'easeOut' },
+                          y: { duration: 6, repeat: Infinity, ease: 'easeInOut' },
+                        }}
+                        className="absolute top-full mt-3 right-0 whitespace-nowrap"
+                      >
+                        <div
+                          className="bg-muted text-foreground px-4 py-2 rounded-lg text-sm flex items-center gap-2 border border-border/50 shadow-sm"
+                          style={{ fontWeight: 500 }}
+                        >
+                          <span>{t.chatbot.tip}</span>
+                          <span>👆</span>
+                          <button
+                            type="button"
+                            onClick={() => setShowModeTip(false)}
+                            className="inline-flex items-center justify-center w-5 h-5 ml-1 rounded-full text-muted-foreground hover:text-foreground transition-colors"
+                            aria-label={language === 'ES' ? 'Cerrar sugerencia' : 'Close tip'}
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </motion.div>
+
+                <AnimatePresence initial={false} mode="popLayout">
+                  {viewMode === 'page' && (
+                    <motion.div
+                      key="desktop-language-toggle"
+                      layout
+                      exit={{ opacity: 0, x: 12, scale: 0.98 }}
+                      transition={TOGGLE_INDICATOR_TRANSITION}
+                      className="relative"
+                    >
+                      <motion.div
+                        initial={false}
+                        animate={showDesktopLanguageToggle ? { opacity: 1, x: 0 } : { opacity: 0, x: 18 }}
+                        transition={LANGUAGE_TOGGLE_REVEAL_TRANSITION}
+                        style={{ pointerEvents: showDesktopLanguageToggle ? 'auto' : 'none' }}
+                        aria-hidden={!showDesktopLanguageToggle}
+                      >
+                        {renderLanguageToggle()}
+                      </motion.div>
+
+                      <AnimatePresence>
+                        {showLanguageTip && (
+                          <motion.div
+                            initial={{ opacity: 0, y: -10, scale: 0.98 }}
+                            animate={{ opacity: 1, y: [0, -4, 0, 4, 0], scale: 1 }}
+                            exit={{ opacity: 0, y: -8, scale: 0.98 }}
+                            transition={{
+                              opacity: { duration: 0.18, ease: 'easeOut' },
+                              scale: { duration: 0.18, ease: 'easeOut' },
+                              y: { duration: 6, repeat: Infinity, ease: 'easeInOut' },
+                            }}
+                            className="absolute top-full mt-3 right-0 whitespace-nowrap"
+                          >
+                            <div
+                              className="bg-muted text-foreground px-4 py-2 rounded-lg text-sm flex items-center gap-2 border border-border/50 shadow-sm"
+                              style={{ fontWeight: 500 }}
+                            >
+                              <span>{LANGUAGE_TIP_TEXT}</span>
+                              <span>👆</span>
+                              <button
+                                type="button"
+                                onClick={() => setShowLanguageTip(false)}
+                                className="inline-flex items-center justify-center w-5 h-5 ml-1 rounded-full text-muted-foreground hover:text-foreground transition-colors"
+                                aria-label="Close language tip"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.div>
+            </LayoutGroup>
 
             <div className="relative lg:hidden">
               <button
@@ -641,13 +835,46 @@ export default function Home() {
                       className="relative w-full bg-muted text-foreground px-3.5 py-3 rounded-lg text-[13px] flex items-center gap-1.5 border border-border/50 shadow-sm"
                       style={{ fontWeight: 500 }}
                     >
-                      <span className="pt-0.5">👆</span>
                       <span className="flex-1 whitespace-nowrap">{t.chatbot.tip}</span>
+                      <span className="shrink-0">👆</span>
                       <button
                         type="button"
                         onClick={() => setShowModeTip(false)}
                         className="inline-flex items-center justify-center w-[18px] h-[18px] rounded-full text-muted-foreground hover:text-foreground transition-colors shrink-0"
                         aria-label={language === 'ES' ? 'Cerrar sugerencia' : 'Close tip'}
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              <AnimatePresence>
+                {viewMode === 'page' && showLanguageTip && !mobileMenuOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10, scale: 0.98 }}
+                    animate={{ opacity: 1, y: [0, -4, 0, 4, 0], scale: 1 }}
+                    exit={{ opacity: 0, y: -8, scale: 0.98 }}
+                    transition={{
+                      opacity: { duration: 0.18, ease: 'easeOut' },
+                      scale: { duration: 0.18, ease: 'easeOut' },
+                      y: { duration: 6, repeat: Infinity, ease: 'easeInOut' },
+                    }}
+                    className="absolute top-full mt-4 right-0 z-10 w-fit min-w-[18rem] max-w-[calc(100vw-1.5rem)]"
+                  >
+                    <div className="absolute -top-1 right-5 w-3 h-3 rotate-45 bg-muted border-l border-t border-border/50" />
+                    <div
+                      className="relative w-full bg-muted text-foreground px-3.5 py-3 rounded-lg text-[13px] flex items-center gap-1.5 border border-border/50 shadow-sm"
+                      style={{ fontWeight: 500 }}
+                    >
+                      <span className="flex-1 whitespace-nowrap">{LANGUAGE_TIP_TEXT}</span>
+                      <span className="shrink-0">👆</span>
+                      <button
+                        type="button"
+                        onClick={() => setShowLanguageTip(false)}
+                        className="inline-flex items-center justify-center w-[18px] h-[18px] rounded-full text-muted-foreground hover:text-foreground transition-colors shrink-0"
+                        aria-label="Close language tip"
                       >
                         <X className="w-3.5 h-3.5" />
                       </button>
@@ -692,7 +919,7 @@ export default function Home() {
 
             <div className="flex flex-col items-center gap-10">
               {renderViewModeToggle(true)}
-              {renderLanguageToggle(true)}
+              {viewMode === 'page' && renderLanguageToggle(true)}
             </div>
           </div>
         </div>
@@ -727,16 +954,20 @@ export default function Home() {
                     transition={{ duration: 0.22, ease: 'easeOut' }}
                     className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 mb-6 sm:mb-16 overflow-hidden"
                   >
-                    <div className="w-[88px] h-[88px] sm:w-[104px] sm:h-[104px] rounded-[28px] bg-gradient-to-br from-[#dfe4ff] to-[#f1e6ff] overflow-hidden flex-shrink-0" />
+                    <div className="w-[88px] h-[88px] sm:w-[104px] sm:h-[104px] rounded-[28px] bg-muted overflow-hidden flex-shrink-0">
+                      <img src={meImage} alt="Tomas Sales" className="w-full h-full object-cover" />
+                    </div>
                     <div className="flex-1 max-w-4xl">
                       <h1 className="text-3xl sm:text-4xl md:text-5xl tracking-tight" style={{ fontWeight: 800, lineHeight: 1.05 }}>
-                        {t.chatbot.greeting}{' '}
-                        <span className="wave-hand inline-block">
-                          👋
-                        </span>
-                        ,
+                        {typedIntroGreeting || '\u00A0'}
+                        {isTypedIntroGreetingComplete && (
+                          <>
+                            {' '}
+                            <span className="wave-hand inline-block">👋</span>,
+                          </>
+                        )}
                         <br />
-                        {t.chatbot.welcome}
+                        {typedIntroWelcome}
                       </h1>
                     </div>
                   </motion.div>
@@ -784,7 +1015,7 @@ export default function Home() {
                   <input
                     type="text"
                     value={chatInput}
-                    onChange={(event) => setChatInput(event.target.value)}
+                    onChange={(event) => handleChatInputChange(event.target.value)}
                     placeholder={t.chatbot.placeholder}
                     className="flex-1 px-6 py-4 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-foreground/20 transition-all text-base sm:text-lg"
                   />
@@ -842,16 +1073,23 @@ export default function Home() {
                   <p className="text-lg md:text-xl text-muted-foreground italic">{t.hero.note}</p>
                 </motion.div>
 
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.6, delay: 0.2 }}
-                  className="order-1 lg:order-2 relative aspect-square rounded-3xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 overflow-hidden"
-                >
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="w-64 h-64 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 opacity-60 blur-3xl animate-pulse"></div>
-                  </div>
-                </motion.div>
+	                <motion.div
+	                  initial={{ opacity: 0, scale: 0.95 }}
+	                  animate={{ opacity: 1, scale: 1 }}
+	                  transition={{ duration: 0.6, delay: 0.2 }}
+	                  className="order-1 lg:order-2 relative aspect-square rounded-3xl bg-muted overflow-hidden"
+	                >
+	                  <video
+	                    className="w-full h-full object-cover"
+	                    src={homeVideo}
+	                    autoPlay
+	                    muted
+	                    loop
+	                    playsInline
+	                    preload="metadata"
+	                    aria-label="Tomas Sales portfolio intro video"
+	                  />
+	                </motion.div>
               </div>
             </div>
           </section>
@@ -937,18 +1175,23 @@ export default function Home() {
           <section id="about" className="py-[88px]">
             <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
               <div className="grid grid-cols-1 lg:grid-cols-5 gap-16 lg:gap-24">
-                <motion.div
-                  className="lg:col-span-2"
-                  initial={{ opacity: 0, x: -40 }}
-                  whileInView={{ opacity: 1, x: 0 }}
-                  viewport={{ once: true }}
-                >
-                  <div className="aspect-[4/3] lg:aspect-[3/4] rounded-2xl bg-gradient-to-br from-cyan-500/30 to-orange-500/30 overflow-hidden sticky top-32">
-                    <div className="w-full h-full bg-gradient-to-br from-cyan-400 to-orange-500 opacity-50"></div>
+                <div className="lg:col-span-2 lg:h-full">
+                  <div className="relative lg:h-full">
+                    <motion.div
+                      ref={aboutImageFrameRef}
+                      className="aspect-[4/3] lg:aspect-[3/4] rounded-2xl bg-muted overflow-hidden lg:will-change-transform"
+                      style={{ y: aboutImageY }}
+                      initial={{ opacity: 0, x: -40 }}
+                      whileInView={{ opacity: 1, x: 0 }}
+                      viewport={{ once: true }}
+                    >
+                      <img src={meImage} alt="Tomas Sales" className="w-full h-full object-cover" />
+                    </motion.div>
                   </div>
-                </motion.div>
+                </div>
 
                 <motion.div
+                  ref={aboutContentRef}
                   className="lg:col-span-3"
                   initial={{ opacity: 0, x: 40 }}
                   whileInView={{ opacity: 1, x: 0 }}

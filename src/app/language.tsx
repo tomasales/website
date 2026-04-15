@@ -9,16 +9,10 @@ type LanguageContextValue = {
 
 const LanguageContext = createContext<LanguageContextValue | null>(null);
 
-const STORAGE_KEY = 'portfolio_language';
-
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  const [language, setLanguage] = useState<Language>(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return stored === 'ES' || stored === 'EN' ? stored : 'EN';
-  });
+  const [language, setLanguage] = useState<Language>('EN');
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, language);
     document.documentElement.lang = language === 'ES' ? 'es' : 'en';
   }, [language]);
 
@@ -32,4 +26,3 @@ export function useLanguage() {
   if (!ctx) throw new Error('useLanguage must be used within LanguageProvider');
   return ctx;
 }
-
