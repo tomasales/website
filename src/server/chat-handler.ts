@@ -160,9 +160,13 @@ function detectReplyLanguage(text: string, fallback: Language): Language {
     'con',
     'contacto',
     'contexto',
+    'contratar',
+    'contratarlo',
+    'contratarte',
     'cual',
     'cuando',
     'curriculum',
+    'deberia',
     'de',
     'decime',
     'donde',
@@ -186,8 +190,10 @@ function detectReplyLanguage(text: string, fallback: Language): Language {
     'para',
     'personal',
     'por',
+    'porque',
     'proyectos',
     'que',
+    'recomendas',
     'quien',
     'quiero',
     'recetas',
@@ -197,6 +203,9 @@ function detectReplyLanguage(text: string, fallback: Language): Language {
     'trabajo',
     'trabaja',
     'trabajas',
+    'tiene',
+    'tienes',
+    'tenes',
     'tu',
     'ubicacion',
     'vos',
@@ -219,7 +228,9 @@ function detectReplyLanguage(text: string, fallback: Language): Language {
     'games',
     'he',
     'his',
+    'hire',
     'hobby',
+    'hobbies',
     'how',
     'is',
     'languages',
@@ -248,7 +259,11 @@ function detectReplyLanguage(text: string, fallback: Language): Language {
   }
 
   if (normalizedText.includes('que hace') || normalizedText.includes('quien es')) spanishScore += 2;
+  if (normalizedText.includes('por que') || normalizedText.includes('porque')) spanishScore += 2;
+  if (normalizedText.includes('deberia contratar') || normalizedText.includes('contratarlo')) spanishScore += 3;
+  if (normalizedText.includes('pasatiempo')) spanishScore += 3;
   if (normalizedText.includes('what does') || normalizedText.includes('tell me')) englishScore += 2;
+  if (normalizedText.includes('why should') || normalizedText.includes('hire')) englishScore += 2;
 
   if (spanishScore > englishScore) return 'ES';
   if (englishScore > spanishScore) return 'EN';
@@ -341,32 +356,6 @@ function buildTestimonialsPayload(replyLanguage: Language) {
   };
 }
 
-function wantsLanguages(text: string) {
-  const normalizedText = compactIntentText(text);
-
-  return (
-    normalizedText.includes('idioma') ||
-    normalizedText.includes('idiomas') ||
-    normalizedText.includes('languages') ||
-    normalizedText.includes('language') ||
-    normalizedText.includes('habla ingles') ||
-    normalizedText.includes('speak english')
-  );
-}
-
-function wantsTools(text: string) {
-  const normalizedText = compactIntentText(text);
-
-  return (
-    normalizedText.includes('herramientas') ||
-    normalizedText.includes('software') ||
-    normalizedText.includes('programas') ||
-    normalizedText.includes('tools') ||
-    normalizedText.includes('apps') ||
-    normalizedText.includes('stack')
-  );
-}
-
 function wantsLocation(text: string) {
   const normalizedText = compactIntentText(text);
 
@@ -383,168 +372,6 @@ function wantsLocation(text: string) {
     normalizedText.includes('location') ||
     normalizedText.includes('based in') ||
     normalizedText.includes('cordoba argentina')
-  );
-}
-
-function wantsProjects(text: string) {
-  const normalizedText = compactIntentText(text);
-
-  return (
-    normalizedText.includes('proyecto') ||
-    normalizedText.includes('proyectos') ||
-    normalizedText.includes('project') ||
-    normalizedText.includes('projects') ||
-    normalizedText.includes('selected work') ||
-    normalizedText.includes('case study') ||
-    normalizedText.includes('caso de estudio') ||
-    normalizedText.includes('portfolio') ||
-    normalizedText.includes('re design') ||
-    normalizedText.includes('redesign') ||
-    normalizedText.includes('100preseguro')
-  );
-}
-
-function wantsDesignApproach(text: string) {
-  const normalizedText = compactIntentText(text);
-
-  return (
-    normalizedText.includes('como trabaja') ||
-    normalizedText.includes('como disena') ||
-    normalizedText.includes('como piensa') ||
-    normalizedText.includes('proceso de diseno') ||
-    normalizedText.includes('enfoque de diseno') ||
-    normalizedText.includes('forma de trabajar') ||
-    normalizedText.includes('metodologia') ||
-    normalizedText.includes('metodologias') ||
-    normalizedText.includes('design process') ||
-    normalizedText.includes('design approach') ||
-    normalizedText.includes('how does tomas work') ||
-    normalizedText.includes('how he works') ||
-    normalizedText.includes('methodology') ||
-    normalizedText.includes('methodologies')
-  );
-}
-
-function wantsActivities(text: string) {
-  const normalizedText = compactIntentText(text);
-
-  return (
-    normalizedText.includes('actividad') ||
-    normalizedText.includes('actividades') ||
-    normalizedText.includes('entrena') ||
-    normalizedText.includes('entrenamiento') ||
-    normalizedText.includes('training') ||
-    normalizedText.includes('climb') ||
-    normalizedText.includes('escalada') ||
-    normalizedText.includes('bouldering') ||
-    normalizedText.includes('yoga') ||
-    normalizedText.includes('calistenia') ||
-    normalizedText.includes('calisthenics')
-  );
-}
-
-function wantsCooking(text: string) {
-  const normalizedText = compactIntentText(text);
-
-  return (
-    normalizedText.includes('cocina') ||
-    normalizedText.includes('cocinar') ||
-    normalizedText.includes('comida') ||
-    normalizedText.includes('alimentacion') ||
-    normalizedText.includes('receta') ||
-    normalizedText.includes('recetas') ||
-    normalizedText.includes('cooking') ||
-    normalizedText.includes('food') ||
-    normalizedText.includes('recipes') ||
-    normalizedText.includes('recipe')
-  );
-}
-
-function wantsGames(text: string) {
-  const normalizedText = compactIntentText(text);
-
-  return (
-    normalizedText.includes('juego') ||
-    normalizedText.includes('juegos') ||
-    normalizedText.includes('juegos de mesa') ||
-    normalizedText.includes('board game') ||
-    normalizedText.includes('board games') ||
-    normalizedText.includes('party game') ||
-    normalizedText.includes('party games') ||
-    normalizedText.includes('estrategia') ||
-    normalizedText.includes('strategy games')
-  );
-}
-
-function wantsPersonalContext(text: string) {
-  const normalizedText = compactIntentText(text);
-
-  return (
-    normalizedText.includes('personal') ||
-    normalizedText.includes('contexto') ||
-    normalizedText.includes('fuera del trabajo') ||
-    normalizedText.includes('vida personal') ||
-    normalizedText.includes('hobbies') ||
-    normalizedText.includes('hobbie') ||
-    normalizedText.includes('que le gusta') ||
-    normalizedText.includes('que te gusta') ||
-    normalizedText.includes('que hace fuera') ||
-    normalizedText.includes('outside work') ||
-    normalizedText.includes('personal context') ||
-    normalizedText.includes('personal life') ||
-    normalizedText.includes('hobby') ||
-    normalizedText.includes('hobbies') ||
-    normalizedText.includes('what does he like') ||
-    normalizedText.includes('what do you like')
-  );
-}
-
-function wantsExperience(text: string) {
-  const normalizedText = compactIntentText(text);
-
-  return (
-    normalizedText.includes('experiencia') ||
-    normalizedText.includes('experience') ||
-    normalizedText.includes('trabajo') ||
-    normalizedText.includes('trabaja') ||
-    normalizedText.includes('trabajas') ||
-    normalizedText.includes('work') ||
-    normalizedText.includes('avature') ||
-    normalizedText.includes('bitsion')
-  );
-}
-
-function wantsEducation(text: string) {
-  const normalizedText = compactIntentText(text);
-
-  return (
-    normalizedText.includes('educacion') ||
-    normalizedText.includes('education') ||
-    normalizedText.includes('estudio') ||
-    normalizedText.includes('estudios') ||
-    normalizedText.includes('certificacion') ||
-    normalizedText.includes('certificaciones') ||
-    normalizedText.includes('certifications') ||
-    normalizedText.includes('cursos') ||
-    normalizedText.includes('courses')
-  );
-}
-
-function wantsProfileSummary(text: string) {
-  const normalizedText = compactIntentText(text);
-
-  return (
-    normalizedText.includes('quien es tomas') ||
-    normalizedText.includes('quien es tomas sales') ||
-    normalizedText.includes('quien sos') ||
-    normalizedText.includes('quien eres') ||
-    normalizedText.includes('sobre tomas') ||
-    normalizedText.includes('about tomas') ||
-    normalizedText.includes('who is tomas') ||
-    normalizedText.includes('who are you') ||
-    normalizedText.includes('tell me about tomas') ||
-    normalizedText.includes('que hace tomas') ||
-    normalizedText.includes('what does tomas do')
   );
 }
 
@@ -572,20 +399,6 @@ function wantsWorkingHours(text: string) {
   );
 }
 
-function buildProjectsPayload(replyLanguage: Language) {
-  const projects = content[replyLanguage].projects.items
-    .map((project) => `**${project.title} - ${project.category}**\n${project.description}`)
-    .join('\n\n');
-  const intro =
-    replyLanguage === 'ES'
-      ? 'Estos son los proyectos principales del portfolio de Tomas:'
-      : 'These are the main projects in Tomas’s portfolio:';
-
-  return {
-    answer: `${intro}\n\n${projects}`,
-  };
-}
-
 function buildCommonAnswerPayload(text: string, replyLanguage: Language) {
   if (wantsWorkingHours(text)) {
     return {
@@ -602,202 +415,6 @@ function buildCommonAnswerPayload(text: string, replyLanguage: Language) {
         replyLanguage === 'ES'
           ? 'Tomas está en Córdoba, Argentina. Su zona horaria es GMT-3.'
           : 'Tomas is based in Córdoba, Argentina. His timezone is GMT-3.',
-    };
-  }
-
-  if (wantsLanguages(text)) {
-    return {
-      answer:
-        replyLanguage === 'ES'
-          ? 'Tomas habla español nativo e inglés avanzado (B2).'
-          : 'Tomas speaks native Spanish and advanced English (B2).',
-    };
-  }
-
-  if (wantsProjects(text)) {
-    return buildProjectsPayload(replyLanguage);
-  }
-
-  if (wantsDesignApproach(text)) {
-    return {
-      answer:
-        replyLanguage === 'ES'
-          ? [
-              'Tomas trabaja con un enfoque estructurado y centrado en decisiones defendibles.',
-              '',
-              '**Diseño y producto**',
-              'Prioriza entender el problema, ordenar criterios, traducir casos de uso en flujos claros y sostener las decisiones con lógica, accesibilidad y consistencia.',
-              '',
-              '**Metodologías**',
-              'Design Thinking, User Centered Design, 5 Elements of UX Design y Scrum.',
-            ].join('\n')
-          : [
-              'Tomas works with a structured approach focused on defensible decisions.',
-              '',
-              '**Design and product**',
-              'He prioritizes understanding the problem, clarifying criteria, translating use cases into clear flows, and backing decisions with logic, accessibility and consistency.',
-              '',
-              '**Methodologies**',
-              'Design Thinking, User Centered Design, 5 Elements of UX Design and Scrum.',
-            ].join('\n'),
-    };
-  }
-
-  if (wantsTools(text)) {
-    return {
-      answer:
-        replyLanguage === 'ES'
-          ? [
-              'Herramientas que usa Tomas:',
-              '',
-              '**Diseño**',
-              'Adobe Illustrator, Adobe Photoshop, Figma y Sketch.',
-              '',
-              '**Gestión y colaboración**',
-              'Jira, Miro y Whimsical.',
-              '',
-              '**AI / LLM**',
-              'Figma Make, ChatGPT y Codex.',
-            ].join('\n')
-          : [
-              'Tools Tomas uses:',
-              '',
-              '**Design**',
-              'Adobe Illustrator, Adobe Photoshop, Figma and Sketch.',
-              '',
-              '**Management and collaboration**',
-              'Jira, Miro and Whimsical.',
-              '',
-              '**AI / LLM**',
-              'Figma Make, ChatGPT and Codex.',
-            ].join('\n'),
-    };
-  }
-
-  if (wantsPersonalContext(text)) {
-    return {
-      answer:
-        replyLanguage === 'ES'
-          ? [
-              'Fuera del trabajo, Tomas suele elegir actividades con lógica interna y mejora progresiva.',
-              '',
-              '**Movimiento**',
-              'Escalada como actividad principal, calistenia y yoga. Le interesan la técnica, el control corporal y el progreso incremental.',
-              '',
-              '**Cocina y hábitos**',
-              'Le gusta la alimentación simple y funcional, con pocos ingredientes y pocos procesados.',
-              '',
-              '**Juego y experiencias**',
-              'Disfruta juegos de mesa estratégicos y party games, eventos, comida, diseño y música sin voz para acompañar momentos.',
-            ].join('\n')
-          : [
-              'Outside work, Tomas tends to choose activities with internal logic and progressive improvement.',
-              '',
-              '**Movement**',
-              'Climbing as his main activity, plus calisthenics and yoga. He values technique, body control and incremental progress.',
-              '',
-              '**Cooking and habits**',
-              'He likes simple, functional food with few ingredients and minimal processed products.',
-              '',
-              '**Games and experiences**',
-              'He enjoys strategic board games and party games, events, food, design and instrumental music to accompany moments.',
-            ].join('\n'),
-    };
-  }
-
-  if (wantsActivities(text)) {
-    return {
-      answer:
-        replyLanguage === 'ES'
-          ? 'Fuera del trabajo, Tomas mantiene una rutina física constante: escalada como actividad principal, calistenia y yoga. Le interesan especialmente actividades con técnica, control corporal y resolución de problemas físicos, como el bouldering.'
-          : 'Outside work, Tomas keeps a consistent physical routine: climbing as his main activity, plus calisthenics and yoga. He is especially interested in activities with technique, body control and physical problem-solving, like bouldering.',
-    };
-  }
-
-  if (wantsCooking(text)) {
-    return {
-      answer:
-        replyLanguage === 'ES'
-          ? 'A Tomas le interesa la alimentación simple y funcional. Cocina con pocos ingredientes, evita procesados y prefiere entender el proceso para repetirlo y mejorarlo antes que seguir recetas complejas.'
-          : 'Tomas is interested in simple, functional food. He cooks with few ingredients, avoids processed products, and prefers understanding the process so he can repeat and improve it rather than following complex recipes.',
-    };
-  }
-
-  if (wantsGames(text)) {
-    return {
-      answer:
-        replyLanguage === 'ES'
-          ? 'A Tomas le gustan los juegos de mesa estratégicos y también los party games. Disfruta sistemas con decisiones claras, incertidumbre, adaptación y profundidad.'
-          : 'Tomas likes strategic board games and party games. He enjoys systems with clear decisions, uncertainty, adaptation and depth.',
-    };
-  }
-
-  if (wantsExperience(text)) {
-    return {
-      answer:
-        replyLanguage === 'ES'
-          ? [
-              'Tomas tiene 9 años de experiencia en UX/UI.',
-              '',
-              '**Avature - 2023 a la actualidad**',
-              'Líder de Proyecto, Analista de Producto y Diseñador UX. Lidera un equipo interdisciplinario, trabaja en planificación, documentación, análisis funcional y diseño, y traduce casos de uso en especificaciones para más de 30 módulos.',
-              '',
-              '**Bitsion - 2017 a 2021**',
-              'Líder de Diseño UX. Estableció el proceso de UX de la compañía, lideró un equipo de 5 diseñadores, revisó más de 200 pantallas y trabajó en más de 30 clientes de distintas industrias.',
-            ].join('\n')
-          : [
-              'Tomas has 9 years of UX/UI experience.',
-              '',
-              '**Avature - 2023 to present**',
-              'Project Lead, Product Analyst and UX Designer. He leads an interdisciplinary team, works on planning, documentation, functional analysis and design, and translates use cases into specifications for more than 30 modules.',
-              '',
-              '**Bitsion - 2017 to 2021**',
-              'UX Design Lead. He established the company UX process, led a team of 5 designers, reviewed more than 200 screens and worked with more than 30 clients across different industries.',
-            ].join('\n'),
-    };
-  }
-
-  if (wantsEducation(text)) {
-    return {
-      answer:
-        replyLanguage === 'ES'
-          ? [
-              'Educación y certificaciones de Tomas:',
-              '',
-              '**Diseñador Gráfico y Publicitario**',
-              'La Metro Escuela de Diseño, graduado con honores en 2019.',
-              '',
-              '**Certificaciones**',
-              'AI Designer - Interaction Design Foundation (2026)',
-              'Scrum Master - Udemy (2022)',
-              'Desarrollo Web - Coderhouse (2022)',
-              'UX/UI Design Avanzado - Coderhouse (2022)',
-              'UX Research - Design Core Academy (2021)',
-              'Design Thinking - Interaction Design Foundation (2019)',
-            ].join('\n')
-          : [
-              'Tomas’s education and certifications:',
-              '',
-              '**Graphic and Advertising Designer**',
-              'La Metro Escuela de Diseño, graduated with honors in 2019.',
-              '',
-              '**Certifications**',
-              'AI Designer - Interaction Design Foundation (2026)',
-              'Scrum Master - Udemy (2022)',
-              'Web Development - Coderhouse (2022)',
-              'Advanced UX/UI Design - Coderhouse (2022)',
-              'UX Research - Design Core Academy (2021)',
-              'Design Thinking - Interaction Design Foundation (2019)',
-            ].join('\n'),
-    };
-  }
-
-  if (wantsProfileSummary(text)) {
-    return {
-      answer:
-        replyLanguage === 'ES'
-          ? 'Tomas Sales es Diseñador Gráfico especializado en UX/UI, basado en Córdoba, Argentina. Tiene 9 años de experiencia trabajando en producto, diseño UX, liderazgo de proyectos y análisis funcional. Actualmente trabaja en Avature como Líder de Proyecto, Analista de Producto y Diseñador UX; antes fue Líder de Diseño UX en Bitsion.'
-          : 'Tomas Sales is a Graphic Designer specialized in UX/UI, based in Córdoba, Argentina. He has 9 years of experience across product, UX design, project leadership and functional analysis. He currently works at Avature as a Project Lead, Product Analyst and UX Designer; before that, he was UX Design Lead at Bitsion.',
     };
   }
 
